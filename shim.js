@@ -1,29 +1,49 @@
-/* Статическая версия: данные в GitHub (приватный репозиторий) или в localStorage. */
+/* Зашифрованное хранилище: vault.json в публичном репозитории, пароль у владельца. */
 (function () {
-  const LS_DATA = "fit-data";
-  const LS_TOKEN = "fit-gh-token";
-  const LS_CFG = "fit-gh-cfg";
-  const DEFAULT_CFG = { owner: "koby11qq2w", repo: "fitness-data", branch: "main", path: "data.json" };
+  const VAULT_URL = "vault.json";
+  const API = "https://api.github.com/repos/koby11qq2w/fitness/contents/vault.json";
+  const LS_PW = "fit-vault-pw";
   const realFetch = window.fetch.bind(window);
-
   const EMPTY = {
-    profiles: {
-      tim: { name: "Тимофей", color: "#5ec8f2" },
-      kristina: { name: "Кристина", color: "#f7a8d8" },
-    },
+    profiles: { tim: { name: "Тимофей", color: "#5ec8f2" }, kristina: { name: "Кристина", color: "#f7a8d8" } },
     log: { tim: {}, kristina: {} },
     custom: { tim: [], kristina: [] },
     measurements: { tim: [], kristina: [] },
     weights: { tim: [], kristina: [] },
     updated: 0,
   };
-
-  function clone(o) { return JSON.parse(JSON.stringify(o)); }
-  function cfg() {
-    try { return Object.assign({}, DEFAULT_CFG, JSON.parse(localStorage.getItem(LS_CFG) || "{}")); }
-    catch (e) { return Object.assign({}, DEFAULT_CFG); }
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+  const enc = new TextEncoder(), dec = new TextDecoder();
+  const b64 = (buf) => {
+    const b = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+    let s = "";
+    for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+    return btoa(s);
+  };
+  const unb64 = (s) => {
+    const bin = atob(String(s).replace(/\s/g, ""));
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  };
+  async function derive(pw, salt) {
+    const base = await crypto.subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 300000, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
   }
-  function token() { return localStorage.getItem(LS_TOKEN) || ""; }
+  async function encryptObj(key, obj) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(JSON.stringify(obj)));
+    return { iv: b64(iv), data: b64(ct) };
+  }
+  async function decryptObj(key, iv, data) {
+    const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(iv) }, key, unb64(data));
+    return JSON.parse(dec.decode(pt));
+  }
+
+  let data = null, vault = null, key = null, ghToken = "", sha = null, timer = null, syncing = false, unlocked = false;
+  let resolveReady;
+  const ready = new Promise((r) => { resolveReady = r; });
+
   function norm(d) {
     d = d || {};
     d.profiles = d.profiles || clone(EMPTY.profiles);
@@ -35,78 +55,57 @@
     d.updated = d.updated || 0;
     return d;
   }
-  function loadLocal() {
-    try { return localStorage.getItem(LS_DATA) ? norm(JSON.parse(localStorage.getItem(LS_DATA))) : null; }
-    catch (e) { return null; }
-  }
-  function saveLocal() { localStorage.setItem(LS_DATA, JSON.stringify(data)); }
 
-  let data = null, sha = null, ready = null, syncing = false, timer = null;
-
-  function b64(str) {
-    const bytes = new TextEncoder().encode(str);
-    let bin = "";
-    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
-    return btoa(bin);
+  async function getVault() {
+    const r = await realFetch(VAULT_URL + "?t=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) throw new Error("vault.json не найден");
+    return r.json();
   }
-  function unb64(s) {
-    const bin = atob(String(s).replace(/\s/g, ""));
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return new TextDecoder().decode(bytes);
+  async function getSha() {
+    if (!ghToken) return;
+    try {
+      const r = await realFetch(API + "?ref=main", { headers: { Authorization: "Bearer " + ghToken, Accept: "application/vnd.github+json" }, cache: "no-store" });
+      if (r.ok) sha = (await r.json()).sha;
+    } catch (e) { /* offline */ }
   }
-  function ghHeaders(t) {
-    return { Authorization: "Bearer " + t, Accept: "application/vnd.github+json", "Content-Type": "application/json" };
+  async function unlock(pw) {
+    if (unlocked) return;
+    const v = await getVault();
+    const salt = unb64(v.salt);
+    const k = await derive(pw, salt);
+    const d = await decryptObj(k, v.dataIv, v.data);
+    let tok = dec.decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(v.tokenIv) }, k, unb64(v.token)));
+    try { tok = JSON.parse(tok); } catch (e) {}
+    data = norm(d); vault = v; key = k; ghToken = tok;
+    await getSha();
+    unlocked = true;
+    resolveReady();
   }
-  function ghUrl(c) {
-    return `https://api.github.com/repos/${c.owner}/${c.repo}/contents/${c.path}`;
-  }
-  async function ghGet() {
-    const c = cfg(), t = token();
-    if (!t || !c.owner || !c.repo) return null;
-    const r = await realFetch(`${ghUrl(c)}?ref=${encodeURIComponent(c.branch)}`, { headers: ghHeaders(t), cache: "no-store" });
-    if (r.status === 404) return null;
-    if (!r.ok) throw new Error("GitHub " + r.status);
-    const j = await r.json();
-    sha = j.sha;
-    return norm(JSON.parse(unb64(j.content)));
-  }
-  async function ghPush() {
-    const c = cfg(), t = token();
-    if (!t || !c.owner || !c.repo) return;
-    const body = { message: "fitness sync " + new Date().toISOString(), content: b64(JSON.stringify(data)), branch: c.branch };
+  async function saveVault() {
+    if (!key || !ghToken) throw new Error("нет доступа");
+    const e = await encryptObj(key, data);
+    const out = Object.assign({}, vault, { dataIv: e.iv, data: e.data, updated: Math.floor(Date.now() / 1000) });
+    const body = { message: "vault " + new Date().toISOString(), content: b64(enc.encode(JSON.stringify(out))), branch: "main" };
     if (sha) body.sha = sha;
-    let r = await realFetch(ghUrl(c), { method: "PUT", headers: ghHeaders(t), body: JSON.stringify(body) });
-    if (r.status === 409) {
-      const g = await ghGet();
-      if (g) { sha = sha; body.sha = sha; r = await realFetch(ghUrl(c), { method: "PUT", headers: ghHeaders(t), body: JSON.stringify(body) }); }
-    }
+    let r = await realFetch(API, { method: "PUT", headers: { Authorization: "Bearer " + ghToken, Accept: "application/vnd.github+json", "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (r.status === 409) { await getSha(); body.sha = sha; r = await realFetch(API, { method: "PUT", headers: { Authorization: "Bearer " + ghToken, Accept: "application/vnd.github+json", "Content-Type": "application/json" }, body: JSON.stringify(body) }); }
     if (!r.ok) throw new Error("GitHub " + r.status);
     const j = await r.json();
     sha = j.content && j.content.sha ? j.content.sha : sha;
-    setBadge(true);
+    vault = out;
   }
-  function scheduleSync() {
-    saveLocal();
+  function schedule() {
     if (timer) clearTimeout(timer);
     timer = setTimeout(async () => {
-      if (!token() || !cfg().owner) return;
-      if (syncing) { scheduleSync(); return; }
+      if (!unlocked || syncing) return;
       syncing = true;
-      try { await ghPush(); } catch (e) { setBadge(false); console.warn(e); } finally { syncing = false; }
-    }, 900);
-  }
-  function setBadge(ok) {
-    const b = document.getElementById("gh-btn");
-    if (!b) return;
-    b.style.background = ok ? "#17351d" : (token() ? "#3a1414" : "#3a3009");
-    b.style.borderColor = ok ? "#2b6b38" : (token() ? "#6f2323" : "#6f5b14");
-    b.textContent = ok ? "⚙" : (token() ? "⚙!" : "⚙·");
+      try { await saveVault(); } catch (e) { console.warn("Не сохранилось в GitHub", e); } finally { syncing = false; }
+    }, 800);
   }
 
   function today() { return new Date().toISOString().slice(0, 10); }
-  function uid() { return Math.random().toString(16).slice(2, 10); }
-  function dateOf(v) { return /^\d{4}-\d{2}-\d{2}$/.test(String(v || "")) ? v : today(); }
+  const uid = () => Math.random().toString(16).slice(2, 10);
+  const dateOf = (v) => /^\d{4}-\d{2}-\d{2}$/.test(String(v || "")) ? v : today();
 
   function cleanEntry(raw) {
     const ex = String(raw.ex || "").trim().slice(0, 40);
@@ -117,8 +116,7 @@
       const sets = [];
       for (const x of raw.sets.slice(0, 40)) {
         if (!x) continue;
-        const w = Math.round((+x.w || 0) * 10) / 10;
-        const r = Math.round(+x.r || 0);
+        const w = Math.round((+x.w || 0) * 10) / 10, r = Math.round(+x.r || 0);
         if (w <= 0 && r <= 0) continue;
         if (w < 0 || w > 500 || r < 0 || r > 200) throw new Error("значение вне диапазона");
         const dw = x.dw != null && x.dw !== "" ? Math.round((+x.dw) * 10) / 10 : null;
@@ -127,10 +125,7 @@
       }
       if (!sets.length) throw new Error("нет подходов");
       const best = sets.reduce((m, x) => (x.w > m.w || (x.w === m.w && x.r > m.r) ? x : m), sets[0]);
-      entry = {
-        id: uid(), d, w: best.w, r: best.r, s: sets.length, note: "", sets,
-        raw: sets.map((x) => `${x.w}/${x.r}` + (x.dw && x.dr ? `+${x.dw}/${x.dr}` : "")).join(" / "),
-      };
+      entry = { id: uid(), d, w: best.w, r: best.r, s: sets.length, note: "", sets, raw: sets.map((x) => `${x.w}/${x.r}` + (x.dw && x.dr ? `+${x.dw}/${x.dr}` : "")).join(" / ") };
     } else {
       const w = Math.round((+raw.w || 0) * 10) / 10, r = Math.round(+raw.r || 0), s = Math.max(1, Math.round(+raw.s || 1));
       if (w < 0 || w > 500 || r < 0 || r > 200 || s < 1 || s > 20) throw new Error("значение вне диапазона");
@@ -139,36 +134,25 @@
     }
     return { ex, entry };
   }
+  function sortLog(log) { for (const ex of Object.keys(log)) log[ex].sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0)); }
 
-  function sortLog(log) {
-    for (const ex of Object.keys(log)) log[ex].sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0));
-  }
-
-  function handleMutation(path, b) {
+  function mutate(path, b) {
     const p = b.profile;
     if (p !== "tim" && p !== "kristina") throw new Error("неизвестный профиль");
     if (path === "/api/entry") {
       const { ex, entry } = cleanEntry(b);
-      (data.log[p][ex] = data.log[p][ex] || []).push(entry);
-      sortLog(data.log[p]);
-      data.updated = Math.floor(Date.now() / 1000);
+      (data.log[p][ex] = data.log[p][ex] || []).push(entry); sortLog(data.log[p]); data.updated = Math.floor(Date.now() / 1000);
       return { ok: true, entry, updated: data.updated };
     }
     if (path === "/api/entry/update") {
       const { ex, entry } = cleanEntry(b);
-      const list = data.log[p][ex] || [];
-      const i = list.findIndex((x) => x.id === b.id);
+      const list = data.log[p][ex] || []; const i = list.findIndex((x) => x.id === b.id);
       if (i < 0) throw new Error("запись не найдена");
-      entry.id = b.id;
-      list[i] = entry;
-      sortLog(data.log[p]);
-      data.updated = Math.floor(Date.now() / 1000);
+      entry.id = b.id; list[i] = entry; sortLog(data.log[p]); data.updated = Math.floor(Date.now() / 1000);
       return { ok: true, entry, updated: data.updated };
     }
     if (path === "/api/entry/delete") {
-      const ex = String(b.ex || "");
-      const list = data.log[p][ex] || [];
-      const next = list.filter((x) => x.id !== b.id);
+      const ex = String(b.ex || ""); const list = data.log[p][ex] || []; const next = list.filter((x) => x.id !== b.id);
       if (next.length === list.length) throw new Error("запись не найдена");
       if (next.length) data.log[p][ex] = next; else delete data.log[p][ex];
       data.updated = Math.floor(Date.now() / 1000);
@@ -177,14 +161,8 @@
     if (path === "/api/exercise") {
       const name = String(b.name || "").trim().slice(0, 60);
       if (!name) throw new Error("введи название");
-      const ex = {
-        id: "custom-" + uid(), name, group: String(b.group || "Другое").slice(0, 20),
-        eq: String(b.eq || "своё").slice(0, 30), kind: ["weight", "reps", "time"].includes(b.kind) ? b.kind : "weight",
-        p: Array.isArray(b.p) ? b.p.slice(0, 8) : [], s: Array.isArray(b.s) ? b.s.slice(0, 8) : [],
-        custom: true, cue: "Своё упражнение.",
-      };
-      data.custom[p].push(ex);
-      data.updated = Math.floor(Date.now() / 1000);
+      const ex = { id: "custom-" + uid(), name, group: String(b.group || "Другое").slice(0, 20), eq: String(b.eq || "своё").slice(0, 30), kind: ["weight", "reps", "time"].includes(b.kind) ? b.kind : "weight", p: Array.isArray(b.p) ? b.p.slice(0, 8) : [], s: Array.isArray(b.s) ? b.s.slice(0, 8) : [], custom: true, cue: "Своё упражнение." };
+      data.custom[p].push(ex); data.updated = Math.floor(Date.now() / 1000);
       return { ok: true, exercise: ex, updated: data.updated };
     }
     if (path === "/api/weight") {
@@ -195,36 +173,25 @@
       return { ok: true, weight: { d, kg }, updated: data.updated };
     }
     if (path === "/api/weight/delete") {
-      const d = String(b.d || "");
-      const before = data.weights[p].length;
+      const d = String(b.d || ""); const before = data.weights[p].length;
       data.weights[p] = data.weights[p].filter((x) => x.d !== d);
       if (before === data.weights[p].length) throw new Error("запись не найдена");
       data.updated = Math.floor(Date.now() / 1000);
       return { ok: true, updated: data.updated };
     }
     if (path === "/api/measure") {
-      const d = dateOf(b.d);
-      const fields = ["chest", "abdomen", "glutes", "thigh", "biceps", "calf"];
-      const vals = { d };
-      for (const f of fields) {
-        const v = b[f];
-        vals[f] = v == null || v === "" ? null : Math.round((+v) * 10) / 10;
-      }
+      const d = dateOf(b.d), fields = ["chest", "abdomen", "glutes", "thigh", "biceps", "calf"], vals = { d };
+      for (const f of fields) vals[f] = b[f] == null || b[f] === "" ? null : Math.round((+b[f]) * 10) / 10;
       if (b.merge) {
         const old = data.measurements[p].find((x) => x.d === d);
-        if (old) {
-          for (const f of fields) if (vals[f] != null) old[f] = vals[f];
-          data.updated = Math.floor(Date.now() / 1000);
-          return { ok: true, measure: old, updated: data.updated };
-        }
+        if (old) { for (const f of fields) if (vals[f] != null) old[f] = vals[f]; data.updated = Math.floor(Date.now() / 1000); return { ok: true, measure: old, updated: data.updated }; }
       }
       data.measurements[p] = data.measurements[p].filter((x) => x.d !== d).concat([vals]).sort((a, c) => (a.d < c.d ? -1 : 1));
       data.updated = Math.floor(Date.now() / 1000);
       return { ok: true, measure: vals, updated: data.updated };
     }
     if (path === "/api/measure/delete") {
-      const d = String(b.d || "");
-      const before = data.measurements[p].length;
+      const d = String(b.d || ""); const before = data.measurements[p].length;
       data.measurements[p] = data.measurements[p].filter((x) => x.d !== d);
       if (before === data.measurements[p].length) throw new Error("замер не найден");
       data.updated = Math.floor(Date.now() / 1000);
@@ -233,10 +200,7 @@
     throw new Error("нет такого действия");
   }
 
-  function response(obj, status) {
-    status = status || 200;
-    return { ok: status < 400, status, json: async () => obj };
-  }
+  const response = (obj, status = 200) => ({ ok: status < 400, status, json: async () => obj });
 
   async function api(url, init) {
     await ready;
@@ -245,102 +209,83 @@
     if (path === "/api/health") return response({ ok: true });
     if (!init || init.method !== "POST") return response({ error: "метод" }, 405);
     try {
-      const body = init.body ? JSON.parse(init.body) : {};
-      const out = handleMutation(path, body);
-      scheduleSync();
+      const out = mutate(path, init.body ? JSON.parse(init.body) : {});
+      schedule();
       return response(out);
-    } catch (e) {
-      return response({ error: e.message }, 400);
-    }
+    } catch (e) { return response({ error: e.message }, 400); }
   }
-
   window.fetch = function (input, init) {
     const url = typeof input === "string" ? input : input && input.url;
     if (url && url.indexOf("/api/") === 0) return api(url, init);
     return realFetch(input, init);
   };
 
-  ready = (async () => {
-    try {
-      const remote = await ghGet();
-      if (remote) data = remote;
-      else data = loadLocal() || clone(EMPTY);
-    } catch (e) {
-      console.warn("GitHub недоступен, локальные данные", e);
-      data = loadLocal() || clone(EMPTY);
-    }
-    saveLocal();
-    return data;
-  })();
+  function gate() {
+    const st = document.createElement("style");
+    st.textContent = `#vault-gate{position:fixed;inset:0;z-index:9999;background:#141518;color:#e8e8ea;display:flex;align-items:center;justify-content:center;font:14px/1.4 -apple-system,"Segoe UI",Roboto,Arial,sans-serif}#vault-gate .b{background:#1e2024;border:1px solid #2c2f34;border-radius:12px;padding:20px;width:min(92vw,360px)}#vault-gate h2{margin:0 0 4px;font-size:17px}#vault-gate p{margin:0 0 14px;color:#9aa0a6;font-size:12px}#vault-gate input{width:100%;box-sizing:border-box;background:#141518;border:1px solid #2c2f34;border-radius:6px;padding:10px;color:#e8e8ea;font:inherit;margin-bottom:10px}#vault-gate button{width:100%;background:#3b82f6;color:#fff;border:0;border-radius:6px;padding:10px;font:600 14px inherit;cursor:pointer}#vault-gate .e{color:#e5484d;font-size:12px;min-height:16px;margin-top:8px}`;
+    document.head.appendChild(st);
+    const d = document.createElement("div");
+    d.id = "vault-gate";
+    d.innerHTML = `<div class="b"><h2>Тренировки</h2><p>Введите пароль. Он один для всех устройств.</p><input id="vault-pw" type="password" autocomplete="current-password" placeholder="пароль"><button id="vault-go">Открыть</button><div class="e" id="vault-err"></div></div>`;
+    document.body.appendChild(d);
+    const go = async () => {
+      const pw = document.getElementById("vault-pw").value;
+      if (!pw) return;
+      document.getElementById("vault-err").textContent = "";
+      try {
+        await unlock(pw);
+        localStorage.setItem(LS_PW, pw);
+        d.remove();
+        settings();
+      } catch (e) { document.getElementById("vault-err").textContent = "Неверный пароль или нет vault.json"; }
+    };
+    document.getElementById("vault-go").onclick = go;
+    document.getElementById("vault-pw").onkeydown = (e) => { if (e.key === "Enter") go(); };
+    document.getElementById("vault-pw").focus();
+  }
 
   function settings() {
+    if (document.getElementById("vault-btn")) return;
     const st = document.createElement("style");
-    st.textContent = `#gh-btn{position:fixed;right:14px;bottom:14px;z-index:1000;width:34px;height:34px;border-radius:50%;border:1px solid #6f5b14;background:#3a3009;color:#fff;font-size:17px;cursor:pointer}#gh-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:1001}#gh-modal[hidden]{display:none}.gh-box{background:#1e2024;color:#e8e8ea;border:1px solid #2c2f34;border-radius:10px;padding:14px;width:min(92vw,360px);display:flex;flex-direction:column;gap:8px;font:13px/1.35 -apple-system,"Segoe UI",Roboto,sans-serif}.gh-box h3{margin:0;font-size:14px}.gh-hint{margin:0;color:#9aa0a6;font-size:11px}.gh-box label{display:flex;flex-direction:column;gap:3px;font-size:10.5px;color:#9aa0a6}.gh-box input{background:#141518;border:1px solid #2c2f34;border-radius:5px;padding:6px 7px;color:#e8e8ea;font:inherit}.gh-actions{display:flex;gap:6px;flex-wrap:wrap}.gh-actions button{background:#23262b;border:1px solid #2c2f34;color:#e8e8ea;border-radius:5px;padding:5px 8px;font-size:11.5px;cursor:pointer}.gh-status{font-size:11px;color:#9aa0a6}.gh-import{font-size:11px;color:#9aa0a6}`;
+    st.textContent = `#vault-btn{position:fixed;right:14px;bottom:14px;z-index:1000;width:34px;height:34px;border-radius:50%;border:1px solid #2b6b38;background:#17351d;color:#fff;font-size:17px;cursor:pointer}#vault-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:1001}#vault-modal[hidden]{display:none}.vault-box{background:#1e2024;color:#e8e8ea;border:1px solid #2c2f34;border-radius:10px;padding:14px;width:min(92vw,340px);display:flex;flex-direction:column;gap:8px;font:13px/1.35 -apple-system,"Segoe UI",Roboto,sans-serif}.vault-box h3{margin:0;font-size:14px}.vault-box p{margin:0;color:#9aa0a6;font-size:11px}.vault-box button{background:#23262b;border:1px solid #2c2f34;color:#e8e8ea;border-radius:5px;padding:7px 9px;font-size:12px;cursor:pointer;text-align:left}`;
     document.head.appendChild(st);
-    const c = cfg();
-    const wrap = document.createElement("div");
-    wrap.id = "gh-wrap";
-    wrap.innerHTML = `
-      <button id="gh-btn" title="Данные: GitHub / локально">⚙</button>
-      <div id="gh-modal" hidden>
-        <div class="gh-box">
-          <h3>Данные страницы</h3>
-          <p class="gh-hint">Приватный репозиторий с <code>data.json</code>. Токен хранится только в этом браузере.</p>
-          <label>владелец<input id="gh-owner" value="${c.owner}"></label>
-          <label>репозиторий<input id="gh-repo" value="${c.repo}"></label>
-          <label>ветка<input id="gh-branch" value="${c.branch}"></label>
-          <label>токен GitHub<input id="gh-token" type="password" value="${token()}"></label>
-          <div id="gh-status" class="gh-status"></div>
-          <div class="gh-actions">
-            <button id="gh-save">Сохранить</button>
-            <button id="gh-push">Загрузить на GitHub</button>
-            <button id="gh-close">Закрыть</button>
-          </div>
-          <div class="gh-actions">
-            <button id="gh-dl">Скачать data.json</button>
-            <label class="gh-import">Импорт data.json<input id="gh-file" type="file" accept=".json"></label>
-          </div>
-        </div>
-      </div>`;
-    document.body.appendChild(wrap);
-    const modal = wrap.querySelector("#gh-modal");
-    wrap.querySelector("#gh-btn").onclick = () => { modal.hidden = false; showStatus(); };
-    wrap.querySelector("#gh-close").onclick = () => { modal.hidden = true; };
-    wrap.querySelector("#gh-save").onclick = () => {
-      const cfg2 = {
-        owner: wrap.querySelector("#gh-owner").value.trim(),
-        repo: wrap.querySelector("#gh-repo").value.trim(),
-        branch: wrap.querySelector("#gh-branch").value.trim() || "main",
-        path: "data.json",
-      };
-      localStorage.setItem(LS_CFG, JSON.stringify(cfg2));
-      localStorage.setItem(LS_TOKEN, wrap.querySelector("#gh-token").value.trim());
-      location.reload();
-    };
-    wrap.querySelector("#gh-push").onclick = async () => {
-      try { await ghPush(); showStatus("Загружено"); } catch (e) { showStatus("Ошибка: " + e.message); }
-    };
-    wrap.querySelector("#gh-dl").onclick = () => {
+    const w = document.createElement("div");
+    w.innerHTML = `<button id="vault-btn" title="Данные зашифрованы">⚙</button><div id="vault-modal" hidden><div class="vault-box"><h3>Данные зашифрованы</h3><p>Пароль хранится в этом браузере. На новом устройстве введите его один раз.</p><button id="vault-pwchange">Сменить пароль</button><button id="vault-dl">Скачать data.json</button><button id="vault-out">Выйти</button><button id="vault-close">Закрыть</button></div></div>`;
+    document.body.appendChild(w);
+    const modal = document.getElementById("vault-modal");
+    document.getElementById("vault-btn").onclick = () => { modal.hidden = false; };
+    document.getElementById("vault-close").onclick = () => { modal.hidden = true; };
+    document.getElementById("vault-out").onclick = () => { localStorage.removeItem(LS_PW); location.reload(); };
+    document.getElementById("vault-dl").onclick = () => {
       const blob = new Blob([JSON.stringify(data, null, 1)], { type: "application/json" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob); a.download = "data.json"; a.click();
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "data.json"; a.click();
     };
-    wrap.querySelector("#gh-file").onchange = (ev) => {
-      const f = ev.target.files[0]; if (!f) return;
-      const rd = new FileReader();
-      rd.onload = () => {
-        try { data = norm(JSON.parse(rd.result)); saveLocal(); scheduleSync(); showStatus("Импортировано"); setTimeout(() => location.reload(), 400); }
-        catch (e) { showStatus("Не JSON"); }
-      };
-      rd.readAsText(f);
+    document.getElementById("vault-pwchange").onclick = async () => {
+      const np = prompt("Новый пароль (минимум 8 символов)");
+      if (!np || np.length < 8) return;
+      if (np !== prompt("Повтори пароль")) { alert("Пароли не совпали"); return; }
+      try {
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const k = await derive(np, salt);
+        const d = await encryptObj(k, data);
+        const t = await encryptObj(k, ghToken);
+        const out = { v: 1, salt: b64(salt), dataIv: d.iv, data: d.data, tokenIv: t.iv, token: t.data, updated: Math.floor(Date.now() / 1000) };
+        const body = { message: "vault password", content: b64(enc.encode(JSON.stringify(out))), branch: "main" };
+        if (sha) body.sha = sha;
+        const r = await realFetch(API, { method: "PUT", headers: { Authorization: "Bearer " + ghToken, Accept: "application/vnd.github+json", "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        if (!r.ok) throw new Error("GitHub " + r.status);
+        const j = await r.json(); sha = j.content.sha; vault = out; key = k;
+        localStorage.setItem(LS_PW, np);
+        alert("Пароль изменён");
+      } catch (e) { alert("Не получилось: " + e.message); }
     };
-    function showStatus(msg) {
-      const el = wrap.querySelector("#gh-status");
-      const cfg2 = cfg();
-      el.textContent = msg || (token() ? `GitHub: ${cfg2.owner}/${cfg2.repo}` : "Локальный режим (без GitHub)");
-    }
-    setBadge(Boolean(sha));
   }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", settings);
-  else settings();
+
+  (async () => {
+    const saved = localStorage.getItem(LS_PW);
+    if (saved) {
+      try { await unlock(saved); settings(); return; } catch (e) { localStorage.removeItem(LS_PW); }
+    }
+    gate();
+  })();
 })();
