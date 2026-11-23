@@ -78,12 +78,15 @@ main{padding:10px 12px 22px;display:flex;flex-direction:column;gap:10px;max-widt
 .ex:hover,.ex:focus-visible{background:var(--panel2);border-color:#343941;outline:none}
 .ex .pic{background:radial-gradient(ellipse at 50% 62%,#1e2227 0%,var(--pic) 72%);height:128px;padding:2px 8px 0;display:flex;align-items:center}
 .ex .pic svg{width:100%;height:100%;overflow:visible}
-.ex .pic.plate{background:#fff;padding:6px 0;justify-content:center}
-.plate-img{display:block;border-radius:8px;box-shadow:0 3px 12px rgba(0,0,0,.45);mix-blend-mode:multiply}
+.ex .pic.plate{background:#0b0c0e;padding:0;justify-content:center;overflow:hidden}
+.plate-img{display:block;border-radius:0;box-shadow:none;filter:invert(1) hue-rotate(180deg)}
+.imgbox{position:relative;display:inline-flex;align-items:center;justify-content:center;max-width:100%;height:100%;overflow:hidden;background:#0b0c0e}
+
+.pic-lg .imgbox{height:auto;max-height:460px}
 .ex .pic.plate .plate-img{width:auto;height:100%;max-width:100%;border-radius:0;box-shadow:none}
-.pic-lg.plate{background:#fff;padding:8px}
+.pic-lg.plate{background:#0b0c0e;padding:8px}
 .dlg-top.single{grid-template-columns:minmax(0,1fr)}
-.pic-lg.plate.full .plate-img{width:auto;max-width:100%;max-height:460px;margin:0 auto;mix-blend-mode:multiply}
+.pic-lg.plate.full .plate-img{width:auto;max-width:100%;max-height:460px;margin:0 auto;filter:invert(1) hue-rotate(180deg);clip-path:inset(8px)}
 .pic-lg.plate .plate-img{width:auto;height:auto;max-height:400px;max-width:100%}
 .bodymap .plate-img{height:250px;width:auto;max-width:100%}
 .more-btn{margin-top:2px;background:var(--panel);border:1px solid var(--line);color:var(--text);

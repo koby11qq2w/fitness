@@ -83,41 +83,41 @@ const PICS = {
 
 /* ---------- каталог упражнений ---------- */
 const CATALOG = [
-  { id: "bench", img: "img/ex/bench-crop.jpg", name: "Жим штанги лёжа", group: "Грудь", eq: "штанга · скамья", kind: "weight",
+  { id: "bench", img: "img/ex/bench-dark.jpg", name: "Жим штанги лёжа", group: "Грудь", eq: "штанга · скамья", kind: "weight",
     p: ["chest", "triceps"], s: ["delts"],
     cue: "Лопатки сведены, ступни в пол. Гриф опускаем к низу груди за 2 секунды, жмём по дуге. Не отбивать." },
-  { id: "dbpress", img: "img/ex/dbpress-crop.jpg", name: "Жим гантелей лёжа", group: "Грудь", eq: "гантели · скамья", kind: "weight",
+  { id: "dbpress", img: "img/ex/dbpress-dark.jpg", name: "Жим гантелей лёжа", group: "Грудь", eq: "гантели · скамья", kind: "weight",
     p: ["chest", "triceps"], s: ["delts"],
     cue: "Ладони друг к другу, локти под 45°. Внизу — растяжение груди, вверху гантели почти сходятся." },
   { id: "pushups", name: "Отжимания", group: "Грудь", eq: "свой вес", kind: "reps",
     p: ["chest", "triceps"], s: ["delts", "abs"],
     cue: "Корпус одной линией, локти ближе к телу. Грудь опускается к полу, поясница не проваливается." },
 
-  { id: "legpress", img: "img/ex/legpress.jpg", name: "Жим ногами", group: "Ноги", eq: "тренажёр", kind: "weight",
+  { id: "legpress", img: "img/ex/legpress-dark.jpg", name: "Жим ногами", group: "Ноги", eq: "тренажёр", kind: "weight",
     p: ["quads", "glutes"], s: ["hamstrings", "calves"],
     cue: "Спина и таз прижаты, колени идут по носкам. Не выпрямляйте ноги до щелчка, опускайте плавно." },
-  { id: "pecfly", img: "img/ex/pecfly-crop.jpg", name: "Бабочка", group: "Грудь", eq: "тренажёр", kind: "weight",
+  { id: "pecfly", img: "img/ex/pecfly-dark.jpg", name: "Бабочка", group: "Грудь", eq: "тренажёр", kind: "weight",
     p: ["chest"], s: ["delts"],
     cue: "Локти на уровне груди, сводим руки за счёт груди. В крайней точке — короткая пауза, назад медленно." },
-  { id: "hammerpress", img: "img/ex/hammerpress-crop.jpg", name: "Жим в Хаммере", group: "Грудь", eq: "тренажёр", kind: "weight",
+  { id: "hammerpress", img: "img/ex/hammerpress-dark.jpg", name: "Жим в Хаммере", group: "Грудь", eq: "тренажёр", kind: "weight",
     p: ["chest", "triceps"], s: ["delts"],
     cue: "Рукоятки на уровне груди, лопатки сведены. Жмём вперёд до выпрямления рук, локти не разводим." },
-  { id: "deadlift", img: "img/ex/deadlift-crop.jpg", name: "Становая тяга", group: "Ноги", eq: "штанга", kind: "weight",
+  { id: "deadlift", img: "img/ex/deadlift-dark.jpg", name: "Становая тяга", group: "Ноги", eq: "штанга", kind: "weight",
     p: ["hamstrings", "glutes", "lower_back"], s: ["traps", "lats", "forearms", "quads"],
     cue: "Гриф у голени, спина прямая. Толкаем пол ногами, штанга скользит по ногам, таз и плечи встают вместе." },
-  { id: "squat", img: "img/ex/squat-crop.jpg", name: "Приседания со штангой", group: "Ноги", eq: "штанга · стойки", kind: "weight",
+  { id: "squat", img: "img/ex/squat-dark.jpg", name: "Приседания со штангой", group: "Ноги", eq: "штанга · стойки", kind: "weight",
     p: ["quads", "glutes"], s: ["hamstrings", "lower_back", "abs"],
     cue: "Стопы на ширине плеч, колени идут по носкам. Таз уходит назад, спина прямая, взгляд вперёд." },
-  { id: "rdl", img: "img/ex/rdl.jpg", name: "Румынская тяга", group: "Ноги", eq: "штанга", kind: "weight",
+  { id: "rdl", img: "img/ex/rdl-dark.jpg", name: "Румынская тяга", group: "Ноги", eq: "штанга", kind: "weight",
     p: ["hamstrings", "glutes"], s: ["lower_back", "forearms"],
     cue: "Ноги почти прямые, таз назад, гриф скользит по бёдрам. Опускаемся до натяжения под коленом." },
-  { id: "lunges", img: "img/ex/lunges-crop.jpg", name: "Выпады с гантелями", group: "Ноги", eq: "гантели", kind: "weight",
+  { id: "lunges", img: "img/ex/lunges-dark.jpg", name: "Выпады с гантелями", group: "Ноги", eq: "гантели", kind: "weight",
     p: ["quads", "glutes"], s: ["hamstrings", "calves"],
     cue: "Шаг вперёд, колено над стопой. Заднее колено почти касается пола, корпус вертикально." },
-  { id: "legcurl", img: "img/ex/legcurl-crop.jpg", name: "Сгибание ног", group: "Ноги", eq: "тренажёр", kind: "weight",
+  { id: "legcurl", img: "img/ex/legcurl-dark.jpg", name: "Сгибание ног", group: "Ноги", eq: "тренажёр", kind: "weight",
     p: ["hamstrings"], s: ["calves"],
     cue: "Пятка идёт к ягодице, таз не отрывается. Внизу — медленное опускание, без рывка." },
-  { id: "legext", img: "img/ex/legext-crop.jpg", name: "Разгибание ног", group: "Ноги", eq: "тренажёр", kind: "weight",
+  { id: "legext", img: "img/ex/legext-dark.jpg", name: "Разгибание ног", group: "Ноги", eq: "тренажёр", kind: "weight",
     p: ["quads"], s: [],
     cue: "Колени по оси тренажёра, разгибаем до конца и держим секунду. Вес не бросаем." },
   { id: "adductor", name: "Сведение ног", group: "Ноги", eq: "тренажёр", kind: "weight",
@@ -126,50 +126,50 @@ const CATALOG = [
   { id: "hipthrust", name: "Ягодичный мост", group: "Ноги", eq: "тренажёр", kind: "weight",
     p: ["glutes"], s: ["hamstrings", "lower_back"],
     cue: "Лопатки на скамье, таз вверх до прямой линии. Вверху сжимаем ягодицы, поясницу не прогибаем." },
-  { id: "calf", img: "img/ex/calf.jpg", name: "Подъём на носки", group: "Ноги", eq: "свой вес / гантели", kind: "weight",
+  { id: "calf", img: "img/ex/calf-dark.jpg", name: "Подъём на носки", group: "Ноги", eq: "свой вес / гантели", kind: "weight",
     p: ["calves"], s: [],
     cue: "Поднимаемся максимально высоко, внизу — полная растяжка. Пауза 1 секунда вверху, без рывков." },
 
-  { id: "row", img: "img/ex/row-crop.jpg", name: "Тяга штанги в наклоне", group: "Спина", eq: "штанга", kind: "weight",
+  { id: "row", img: "img/ex/row-dark.jpg", name: "Тяга штанги в наклоне", group: "Спина", eq: "штанга", kind: "weight",
     p: ["lats", "traps"], s: ["biceps", "forearms", "lower_back"],
     cue: "Наклон 45°, спина прямая. Тянем гриф к поясу, локти вдоль тела, лопатки сводим." },
-  { id: "machrow", img: "img/ex/machrow-crop.jpg", name: "Рычажная тяга", group: "Спина", eq: "тренажёр", kind: "weight",
+  { id: "machrow", img: "img/ex/machrow-dark.jpg", name: "Рычажная тяга", group: "Спина", eq: "тренажёр", kind: "weight",
     p: ["lats", "traps"], s: ["biceps", "forearms"],
     cue: "Тянем рукоять к поясу, лопатки сводим. Корпус неподвижен, работаем спиной." },
-  { id: "lattro", img: "img/ex/lattro-crop.jpg", name: "Тяга верхнего блока", group: "Спина", eq: "блок", kind: "weight",
+  { id: "lattro", img: "img/ex/lattro-dark.jpg", name: "Тяга верхнего блока", group: "Спина", eq: "блок", kind: "weight",
     p: ["lats"], s: ["biceps", "traps"],
     cue: "Тянем рукоять к груди, локти вниз. Вверх — медленно, без раскачки." },
-  { id: "cablerow", img: "img/ex/cablerow-crop.jpg", name: "Горизонтальная тяга", group: "Спина", eq: "блок", kind: "weight",
+  { id: "cablerow", img: "img/ex/cablerow-dark.jpg", name: "Горизонтальная тяга", group: "Спина", eq: "блок", kind: "weight",
     p: ["lats", "traps"], s: ["biceps", "forearms"],
     cue: "Спина прямая, тянем к животу. Сводим лопатки, корпус не заваливаем назад." },
-  { id: "pullups", img: "img/ex/pullups-crop.jpg", name: "Подтягивания", group: "Спина", eq: "перекладина", kind: "reps",
+  { id: "pullups", img: "img/ex/pullups-dark.jpg", name: "Подтягивания", group: "Спина", eq: "перекладина", kind: "reps",
     p: ["lats", "biceps"], s: ["traps", "forearms", "abs"],
     cue: "Хват чуть шире плеч, тянем грудью к перекладине. Опускаемся медленно, без раскачки." },
 
-  { id: "ohp", img: "img/ex/ohp-crop.jpg", name: "Жим стоя", group: "Плечи", eq: "штанга", kind: "weight",
+  { id: "ohp", img: "img/ex/ohp-dark.jpg", name: "Жим стоя", group: "Плечи", eq: "штанга", kind: "weight",
     p: ["delts", "triceps"], s: ["traps", "abs"],
     cue: "Штанга на груди, пресс собран. Жмём вверх, голову убираем, вверху штанга над серединой стопы." },
 
-  { id: "reardelt", img: "img/ex/reardelt-crop.jpg", name: "Обратная бабочка", group: "Плечи", eq: "тренажёр", kind: "weight",
+  { id: "reardelt", img: "img/ex/reardelt-dark.jpg", name: "Обратная бабочка", group: "Плечи", eq: "тренажёр", kind: "weight",
     p: ["delts"], s: ["traps"],
     cue: "Руки в стороны, лопатки сведены. Тянем задней дельтой, корпус не раскачиваем." },
-  { id: "lateral", img: "img/ex/lateral-crop.jpg", name: "Махи в стороны", group: "Плечи", eq: "гантели / тренажёр", kind: "weight",
+  { id: "lateral", img: "img/ex/lateral-dark.jpg", name: "Махи в стороны", group: "Плечи", eq: "гантели / тренажёр", kind: "weight",
     p: ["delts"], s: ["traps"],
     cue: "Поднимаем руки до уровня плеч, локти чуть согнуты. Без рывков и без помощи корпусом." },
-  { id: "uprightrow", img: "img/ex/uprightrow-crop.jpg", name: "Протяжка к подбородку", group: "Плечи", eq: "штанга / блок", kind: "weight",
+  { id: "uprightrow", img: "img/ex/uprightrow-dark.jpg", name: "Протяжка к подбородку", group: "Плечи", eq: "штанга / блок", kind: "weight",
     p: ["delts", "traps"], s: ["biceps"],
     cue: "Тянем гриф вдоль тела к подбородку, локти выше кистей. Вверх — выдох, без рывка." },
-  { id: "curl", img: "img/ex/curl-crop.jpg", name: "Подъём на бицепс", group: "Руки", eq: "гантели / штанга", kind: "weight",
+  { id: "curl", img: "img/ex/curl-dark.jpg", name: "Подъём на бицепс", group: "Руки", eq: "гантели / штанга", kind: "weight",
     p: ["biceps"], s: ["forearms"],
     cue: "Локти прижаты, работаем только предплечьем. Внизу не расслабляем, вверху — пауза." },
-  { id: "triceps", img: "img/ex/triceps-crop.jpg", name: "Разгибание на трицепс", group: "Руки", eq: "гантель · скамья", kind: "weight",
+  { id: "triceps", img: "img/ex/triceps-dark.jpg", name: "Разгибание на трицепс", group: "Руки", eq: "гантель · скамья", kind: "weight",
     p: ["triceps"], s: ["forearms"],
     cue: "Локти смотрят в потолок и не двигаются. Разгибаем до конца, опускаем за голову медленно." },
 
   { id: "plank", name: "Планка", group: "Пресс", eq: "свой вес", kind: "time",
     p: ["abs", "obliques"], s: ["lower_back", "glutes", "delts"],
     cue: "Локти под плечами, таз не провисает и не задирается. Дышим ровно, держим до 60 секунд." },
-  { id: "crunches", img: "img/ex/crunches-crop.jpg", name: "Скручивания", group: "Пресс", eq: "свой вес", kind: "reps",
+  { id: "crunches", img: "img/ex/crunches-dark.jpg", name: "Скручивания", group: "Пресс", eq: "свой вес", kind: "reps",
     p: ["abs"], s: ["obliques"],
     cue: "Поясница на полу, поднимаем лопатки, а не шею. Вверху выдох, внизу не ложимся полностью." },
 ];
@@ -538,7 +538,7 @@ function exerciseCard(EX) {
     : (d > 0 ? "+" : "") + kg(d) + " " + unit;
   const dcls = d > 0 ? "up" : d < 0 ? "down" : "";
   return `<article class="ex" data-ex="${EX.id}" tabindex="0" role="button" aria-label="${esc(EX.name)} — подробнее">
-    <div class="pic${EX.img ? " plate" : ""}">${EX.img ? `<img class="plate-img" src="${EX.img}" alt="${esc(EX.name)}">` : pictoSvg(EX)}</div>
+    <div class="pic${EX.img ? " plate" : ""}">${EX.img ? `<span class="imgbox"><img class="plate-img" src="${EX.img}" alt="${esc(EX.name)}"></span>` : pictoSvg(EX)}</div>
     <div class="body">
       <div class="ex-top"><h3>${esc(EX.name)}</h3><span class="eq">${esc(EX.eq)}</span></div>
       <div class="mchips">${chips}</div>
@@ -1091,7 +1091,7 @@ function openEx(id) {
     </div>
     <div class="dlg-body">
       <div class="dlg-top${hasImg ? " single" : ""}">
-        <div class="pic-lg${hasImg ? " plate full" : ""}">${hasImg ? `<img class="plate-img" src="${EX.img}" alt="${esc(EX.name)}">` : pictoSvg(EX)}</div>
+        <div class="pic-lg${hasImg ? " plate full" : ""}">${hasImg ? `<span class="imgbox"><img class="plate-img" src="${EX.img}" alt="${esc(EX.name)}"></span>` : pictoSvg(EX)}</div>
         ${hasImg ? "" : `<div>
           <div class="bodymap">${bodyMapSvg(EX)}</div>
           ${legendSvg(EX)}
