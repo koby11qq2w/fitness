@@ -96,6 +96,9 @@ const CATALOG = [
   { id: "legpress", img: "img/ex/legpress-dark.jpg", name: "Жим ногами", group: "Ноги", eq: "тренажёр", kind: "weight",
     p: ["quads", "glutes"], s: ["hamstrings", "calves"],
     cue: "Спина и таз прижаты, колени идут по носкам. Не выпрямляйте ноги до щелчка, опускайте плавно." },
+  { id: "inclinepress", name: "Жим гантелей на наклонной", group: "Грудь", eq: "гантели · скамья", kind: "weight",
+    p: ["chest"], s: ["triceps", "delts"], video: "video/incline.mp4", poster: "video/incline.jpg",
+    cue: "Лопатки сведены, гантели над верхней частью груди. Опускаем до лёгкого растяжения и жмём вверх." },
   { id: "pecfly", img: "img/ex/pecfly-dark.jpg", name: "Бабочка", group: "Грудь", eq: "тренажёр", kind: "weight",
     p: ["chest"], s: ["delts"],
     cue: "Локти на уровне груди, сводим руки за счёт груди. В крайней точке — короткая пауза, назад медленно." },
@@ -538,7 +541,7 @@ function exerciseCard(EX) {
     : (d > 0 ? "+" : "") + kg(d) + " " + unit;
   const dcls = d > 0 ? "up" : d < 0 ? "down" : "";
   return `<article class="ex" data-ex="${EX.id}" tabindex="0" role="button" aria-label="${esc(EX.name)} — подробнее">
-    <div class="pic${EX.img ? " plate" : ""}">${EX.img ? `<span class="imgbox"><img class="plate-img" src="${EX.img}" alt="${esc(EX.name)}"></span>` : pictoSvg(EX)}</div>
+    <div class="pic${EX.video ? " video" : EX.img ? " plate" : ""}">${EX.video ? `<video class="card-video" muted loop playsinline preload="none" poster="${EX.poster || ""}" data-src="${EX.video}"></video>` : EX.img ? `<span class="imgbox"><img class="plate-img" src="${EX.img}" alt="${esc(EX.name)}"></span>` : pictoSvg(EX)}</div>
     <div class="body">
       <div class="ex-top"><h3>${esc(EX.name)}</h3><span class="eq">${esc(EX.eq)}</span></div>
       <div class="mchips">${chips}</div>
@@ -551,6 +554,26 @@ function exerciseCard(EX) {
       </div>
     </div>
   </article>`;
+}
+
+let vidObs = null;
+function hydrateVideos() {
+  const vids = document.querySelectorAll("video[data-src]");
+  if (!("IntersectionObserver" in window)) {
+    vids.forEach((v) => { if (!v.src) v.src = v.dataset.src; v.play().catch(() => {}); });
+    return;
+  }
+  if (!vidObs) {
+    vidObs = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        const v = en.target;
+        if (en.isIntersecting) {
+          if (!v.src && v.dataset.src) { v.src = v.dataset.src; v.play().catch(() => {}); }
+        } else v.pause();
+      });
+    }, { rootMargin: "250px 0px" });
+  }
+  vids.forEach((v) => { if (!v.dataset.obs) { v.dataset.obs = "1"; vidObs.observe(v); } });
 }
 
 function renderGrid() {
@@ -571,6 +594,7 @@ function renderGrid() {
     el.addEventListener("click", open);
     el.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); open(); } });
   });
+  hydrateVideos();
 }
 
 function renderFilters() {
@@ -1081,6 +1105,7 @@ function openEx(id) {
   const weightLabel = kind === "weight" ? "вес, кг" : "доп. вес, кг";
   const isLP = EX.id === "legpress";
   const hasImg = !!EX.img;
+  const hasVideo = !!EX.video;
   const lpLegend = `<div class="bodymap-legend lp-legend"><span><i style="background:#b83a2e"></i>квадрицепс</span><span><i style="background:#2f6fb2"></i>задняя поверхность</span><span><i style="background:#7b4f9e"></i>ягодицы</span><span><i style="background:#3f8f4e"></i>голени</span></div>`;
 
   $("dlg-in").innerHTML = `
@@ -1090,14 +1115,14 @@ function openEx(id) {
       <button class="x" id="dlg-x" aria-label="Закрыть">×</button>
     </div>
     <div class="dlg-body">
-      <div class="dlg-top${hasImg ? " single" : ""}">
-        <div class="pic-lg${hasImg ? " plate full" : ""}">${hasImg ? `<span class="imgbox"><img class="plate-img" src="${EX.img}" alt="${esc(EX.name)}"></span>` : pictoSvg(EX)}</div>
-        ${hasImg ? "" : `<div>
+      <div class="dlg-top${hasImg || hasVideo ? " single" : ""}">
+        <div class="pic-lg${hasVideo ? " video" : hasImg ? " plate full" : ""}">${hasVideo ? `<video class="detail-video" autoplay muted loop playsinline controls poster="${EX.poster || ""}"><source src="${EX.video}" type="video/mp4"></video>` : hasImg ? `<span class="imgbox"><img class="plate-img" src="${EX.img}" alt="${esc(EX.name)}"></span>` : pictoSvg(EX)}</div>
+        ${hasImg || hasVideo ? "" : `<div>
           <div class="bodymap">${bodyMapSvg(EX)}</div>
           ${legendSvg(EX)}
         </div>`}
       </div>
-      ${isLP ? lpLegend : ""}
+      ${isLP && !hasVideo ? lpLegend : ""}
       <p class="cue">${esc(EX.cue)}</p>
       ${EX.id === "legpress" ? `
       <button class="more-btn" id="more-btn" aria-expanded="false">Описание и техника</button>

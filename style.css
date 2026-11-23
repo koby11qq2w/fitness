@@ -79,6 +79,10 @@ main{padding:10px 12px 22px;display:flex;flex-direction:column;gap:10px;max-widt
 .ex .pic{background:radial-gradient(ellipse at 50% 62%,#1e2227 0%,var(--pic) 72%);height:128px;padding:2px 8px 0;display:flex;align-items:center}
 .ex .pic svg{width:100%;height:100%;overflow:visible}
 .ex .pic.plate{background:#0b0c0e;padding:0;justify-content:center;overflow:hidden}
+.ex .pic.video{background:#0b0c0e;padding:0;justify-content:center}
+.card-video{width:auto;height:100%;max-width:100%;object-fit:contain;display:block;background:#0b0c0e}
+.pic-lg.video{background:#0b0c0e;padding:8px;display:flex;justify-content:center}
+.detail-video{width:100%;max-width:640px;max-height:460px;display:block;background:#000;border-radius:6px}
 .plate-img{display:block;border-radius:0;box-shadow:none;filter:invert(1) hue-rotate(180deg)}
 .imgbox{position:relative;display:inline-flex;align-items:center;justify-content:center;max-width:100%;height:100%;overflow:hidden;background:#0b0c0e}
 
