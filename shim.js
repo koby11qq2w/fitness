@@ -77,9 +77,9 @@
     let tok = dec.decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(v.tokenIv) }, k, unb64(v.token)));
     try { tok = JSON.parse(tok); } catch (e) {}
     data = norm(d); vault = v; key = k; ghToken = tok;
-    await getSha();
     unlocked = true;
     resolveReady();
+    getSha();
   }
   async function saveVault() {
     if (!key || !ghToken) throw new Error("нет доступа");
