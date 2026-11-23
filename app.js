@@ -108,7 +108,7 @@ const CATALOG = [
   { id: "deadlift", img: "img/ex/deadlift-dark.jpg", name: "Становая тяга", group: "Ноги", eq: "штанга", kind: "weight",
     p: ["hamstrings", "glutes", "lower_back"], s: ["traps", "lats", "forearms", "quads"],
     cue: "Гриф у голени, спина прямая. Толкаем пол ногами, штанга скользит по ногам, таз и плечи встают вместе." },
-  { id: "squat", img: "img/ex/squat-dark.jpg", name: "Приседания со штангой", group: "Ноги", eq: "штанга · стойки", kind: "weight",
+  { id: "squat", img: "img/ex/squat-dark.jpg", video: "video/squat.mp4?v=1", poster: "video/squat.jpg?v=1", name: "Приседания со штангой", group: "Ноги", eq: "штанга · стойки", kind: "weight",
     p: ["quads", "glutes"], s: ["hamstrings", "lower_back", "abs"],
     cue: "Стопы на ширине плеч, колени идут по носкам. Таз уходит назад, спина прямая, взгляд вперёд." },
   { id: "rdl", img: "img/ex/rdl-dark.jpg", name: "Румынская тяга", group: "Ноги", eq: "штанга", kind: "weight",
