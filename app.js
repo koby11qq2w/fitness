@@ -183,7 +183,7 @@ const CATALOG = [
 const GROUPS = ["Все", "Грудь", "Спина", "Ноги", "Плечи", "Руки", "Пресс", "Другое"];
 
 /* ---------- состояние ---------- */
-const state = { p: "tim", data: null, group: "Все", ex: null, view: "grid", dlg: null };
+const state = { p: "tim", data: null, group: "Все", ex: null, view: "grid", dlg: null, library: null, libQ: "", libPart: "Все", libShown: 60 };
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -867,16 +867,95 @@ function renderMeasure() {
   });
 }
 
+
+const LIB_PARTS = { "CHEST": "Грудь", "BACK": "Спина", "LEGS": "Ноги", "SHOULDERS": "Плечи", "BICEPS": "Руки", "TRICEPS": "Руки", "ABS": "Пресс", "GLUTEUS": "Ягодицы" };
+const LIB_FILTERS = ["Все", "Грудь", "Спина", "Ноги", "Плечи", "Руки", "Пресс", "Ягодицы"];
+
+async function loadLibrary() {
+  if (state.library) return state.library;
+  const r = await fetch("library.json", { cache: "force-cache" });
+  state.library = await r.json();
+  return state.library;
+}
+
+function libFiltered() {
+  const q = state.libQ.trim().toLowerCase();
+  return (state.library || []).filter((x) => {
+    const part = LIB_PARTS[x.bodyPart] || "Другое";
+    if (state.libPart !== "Все" && part !== state.libPart) return false;
+    if (!q) return true;
+    return (x.title + " " + x.titleEn + " " + (x.muscles || []).join(" ")).toLowerCase().includes(q);
+  });
+}
+
+function renderLibrary() {
+  const box = $("library");
+  if (!state.library) {
+    box.innerHTML = `<div class="empty-note">Загружаю библиотеку…</div>`;
+    loadLibrary().then(() => renderLibrary()).catch((e) => { box.innerHTML = `<div class="empty-note">Не загрузилась: ${esc(e.message)}</div>`; });
+    return;
+  }
+  const list = libFiltered();
+  const parts = LIB_FILTERS.map((p) => `<button data-lp="${p}" class="${state.libPart === p ? "on" : ""}">${p}</button>`).join("");
+  const cards = list.slice(0, state.libShown).map((x) => {
+    const part = LIB_PARTS[x.bodyPart] || "Другое";
+    const img = x.image || "";
+    return `<article class="libcard" data-lib="${x.id}" tabindex="0">
+      <div class="libimg">${img ? `<img src="${esc(img)}" loading="lazy" alt="">` : `<div class="noimg">нет фото</div>`}</div>
+      <div class="libbody"><h3>${esc(x.title)}</h3><div class="libsub">${esc(part)}${x.titleEn ? " · " + esc(x.titleEn) : ""}</div>
+      <div class="libmus">${esc(part)}</div></div>
+    </article>`;
+  }).join("");
+  box.innerHTML = `<div class="lib-head"><h1>Библиотека упражнений</h1><span>${list.length} из ${state.library.length}</span></div>
+    <div class="lib-controls"><input id="lib-q" type="search" placeholder="Поиск упражнения…" value="${esc(state.libQ)}"><div class="lib-parts">${parts}</div></div>
+    <div class="lib-grid">${cards || `<div class="empty-note">Ничего не найдено.</div>`}</div>
+    ${list.length > state.libShown ? `<div class="lib-more"><button id="lib-more">Показать ещё</button></div>` : ""}`;
+  $("lib-q").oninput = (e) => { state.libQ = e.target.value; state.libShown = 60; renderLibrary(); const q = $("lib-q"); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } };
+  box.querySelectorAll("[data-lp]").forEach((b) => { b.onclick = () => { state.libPart = b.dataset.lp; state.libShown = 60; renderLibrary(); }; });
+  if ($("lib-more")) $("lib-more").onclick = () => { state.libShown += 60; renderLibrary(); };
+  box.querySelectorAll("[data-lib]").forEach((el) => {
+    const open = () => openLib(el.dataset.lib);
+    el.onclick = open;
+    el.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } };
+  });
+}
+
+function openLib(id) {
+  const x = (state.library || []).find((y) => y.id === id);
+  if (!x) return;
+  const part = LIB_PARTS[x.bodyPart] || "Другое";
+  const media = x.video
+    ? `<video class="lib-video" controls autoplay muted loop playsinline poster="${esc(x.image || "")}"><source src="${esc(x.video)}" type="video/mp4"></video>`
+    : (x.image ? `<img class="lib-video" src="${esc(x.image)}" alt="">` : "");
+  const text = (s) => `<p>${esc(s).replace(/\n+/g, "</p><p>")}</p>`;
+  $("dlg-in").innerHTML = `
+    <div class="dlg-head"><div><h2 id="dlg-title">${esc(x.title)}</h2>
+      <div class="sub2">${esc(part)}${x.titleEn ? " · " + esc(x.titleEn) : ""}</div></div>
+      <button class="x" id="dlg-x" aria-label="Закрыть">×</button></div>
+    <div class="dlg-body">
+      ${media ? `<div class="lib-media">${media}</div>` : ""}
+      ${x.description ? `<h3>Описание</h3>${text(x.description)}` : ""}
+      ${x.instructions ? `<h3>Техника</h3>${text(x.instructions)}` : ""}
+      ${x.tips ? `<h3>Советы</h3>${text(x.tips)}` : ""}
+      ${x.mistakes ? `<h3>Частые ошибки</h3>${text(x.mistakes)}` : ""}
+      ${x.path ? `<p class="lib-src"><a href="https://smartworkout.app${esc(x.path)}" target="_blank" rel="noopener">Открыть на SmartWorkout</a></p>` : ""}
+    </div>`;
+  $("dlg-x").onclick = closeDlg;
+  openDlg();
+}
+
 function renderView() {
   const gridView = state.view === "grid";
   $("grid").hidden = !gridView;
-  $("cards").hidden = state.view === "measure";
+  $("cards").hidden = state.view === "measure" || state.view === "library";
   $("journal").hidden = state.view !== "journal";
   $("measure").hidden = state.view !== "measure";
+  $("library").hidden = state.view !== "library";
   document.querySelector(".toolbar").style.display = gridView ? "" : "none";
   $("viewtabs").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.v === state.view));
   if (state.view === "journal") renderJournal();
   if (state.view === "measure") renderMeasure();
+  if (state.view === "library") renderLibrary();
 }
 
 function refresh() {
@@ -1411,6 +1490,8 @@ async function boot() {
     const id = location.hash.slice(1).replace("!", "");
     if (id === "journal") { state.view = "journal"; renderView(); }
     else if (id === "measure") { state.view = "measure"; renderView(); }
+    else if (id === "library") { state.view = "library"; renderView(); }
+    else if (id.indexOf("lib-") === 0) { state.view = "library"; renderView(); loadLibrary().then(() => openLib(id)); }
     else if (id === "newex") setTimeout(openNewEx, 120);
     else if (id === "add") setTimeout(openPicker, 120);
     else if (allExercises().some((e) => e.id === id)) setTimeout(() => {
