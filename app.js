@@ -83,7 +83,7 @@ const PICS = {
 
 /* ---------- каталог упражнений ---------- */
 const CATALOG = [
-  { id: "bench", img: "img/ex/bench-dark.jpg", name: "Жим штанги лёжа", group: "Грудь", eq: "штанга · скамья", kind: "weight",
+  { id: "bench", img: "img/ex/bench-dark.jpg", video: "video/bench.mp4?v=1", poster: "video/bench.jpg?v=1", name: "Жим штанги лёжа", group: "Грудь", eq: "штанга · скамья", kind: "weight",
     p: ["chest", "triceps"], s: ["delts"],
     cue: "Лопатки сведены, ступни в пол. Гриф опускаем к низу груди за 2 секунды, жмём по дуге. Не отбивать." },
   { id: "dbpress", img: "img/ex/dbpress-dark.jpg", name: "Жим гантелей лёжа", group: "Грудь", eq: "гантели · скамья", kind: "weight",
