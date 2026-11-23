@@ -97,7 +97,7 @@ const CATALOG = [
     p: ["quads", "glutes"], s: ["hamstrings", "calves"],
     cue: "Спина и таз прижаты, колени идут по носкам. Не выпрямляйте ноги до щелчка, опускайте плавно." },
   { id: "inclinepress", name: "Жим гантелей на наклонной", group: "Грудь", eq: "гантели · скамья", kind: "weight",
-    p: ["chest"], s: ["triceps", "delts"], video: "video/incline.mp4", poster: "video/incline.jpg",
+    p: ["chest"], s: ["triceps", "delts"], video: "video/incline.mp4?v=2", poster: "video/incline.jpg?v=2",
     cue: "Лопатки сведены, гантели над верхней частью груди. Опускаем до лёгкого растяжения и жмём вверх." },
   { id: "pecfly", img: "img/ex/pecfly-dark.jpg", name: "Бабочка", group: "Грудь", eq: "тренажёр", kind: "weight",
     p: ["chest"], s: ["delts"],
