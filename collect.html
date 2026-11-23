@@ -1,0 +1,35 @@
+<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Сбор видео SmartWorkout</title>
+<style>
+body{margin:0;background:#141518;color:#e8e8ea;font:14px/1.5 -apple-system,"Segoe UI",Roboto,Arial,sans-serif;padding:28px}
+.wrap{max-width:760px;margin:0 auto}h1{font-size:22px;margin:0 0 8px}p{color:#c9cdd2}ol{color:#c9cdd2;padding-left:22px}li{margin:8px 0}
+code,textarea{background:#0b0c0e;border:1px solid #2c2f34;border-radius:6px;color:#b9eaff}
+code{padding:2px 5px;font-size:12px}
+textarea{width:100%;height:90px;box-sizing:border-box;padding:10px;font:12px/1.4 monospace;resize:vertical}
+button{background:#3b82f6;color:#fff;border:0;border-radius:6px;padding:10px 16px;font:600 14px inherit;cursor:pointer;margin:8px 0}
+.note{background:#1e2024;border:1px solid #2c2f34;border-radius:8px;padding:12px 14px;color:#9aa0a6;font-size:13px}
+a{color:#8ecbff}
+</style>
+<div class="wrap">
+<h1>Сбор видео SmartWorkout</h1>
+<p>Один раз запускаем скрипт в браузере — он сам обойдёт каталог и соберёт ссылки на видео для наших упражнений.</p>
+<ol>
+<li>Открой любой exercise на <a href="https://smartworkout.app/ru/biblioteka-uprazhneniy/grud" target="_blank">smartworkout.app</a> (например, «Жим штанги лёжа»).</li>
+<li>Нажми <b>F12</b> → вкладка <b>Console</b>.</li>
+<li>Скопируй команду ниже и вставь в консоль, нажми Enter.</li>
+<li>Подожди 1–2 минуты: скрипт напишет прогресс и скачает файл <code>smartworkout-videos.json</code>.</li>
+<li>Пришли этот файл сюда — я скачаю все видео, сожму и добавлю в карточки.</li>
+</ol>
+<textarea id="cmd" readonly>fetch('https://raw.githubusercontent.com/koby11qq2w/fitness/main/collect.js?t='+Date.now()).then(r=>r.text()).then(eval)</textarea>
+<button id="copy">Скопировать команду</button>
+<div class="note">Если Chrome пишет «Don't paste code» — набери в консоли <code>allow pasting</code> и Enter, затем вставь команду снова. Если консоль ругается на <code>eval</code>, скачай <a href="https://raw.githubusercontent.com/koby11qq2w/fitness/main/collect.js" target="_blank">collect.js</a> и вставь его текст целиком.</div>
+</div>
+<script>
+document.getElementById('copy').onclick=async()=>{
+  const t=document.getElementById('cmd').value;
+  try{await navigator.clipboard.writeText(t);document.getElementById('copy').textContent='Скопировано';}
+  catch(e){document.getElementById('cmd').select();document.execCommand('copy');}
+};
+</script>
+</html>
