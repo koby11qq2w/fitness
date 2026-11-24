@@ -1057,7 +1057,19 @@ function lastSetsHtml(e) {
   return `<div class="last-set">
     <div class="ls-head"><b>Последняя тренировка</b> · ${fmtD(e.d, true)}<span>тоннаж ${num(tonnageOf(e))} т</span></div>
     <div class="ls-wrap">${setsTableHtml(e, true)}</div>
+    <div class="new-actions"><button type="button" class="ghost-add edit-last">Редактировать тренировку</button></div>
   </div>`;
+}
+function bindLastEdit(box, EX, e) {
+  const b = box.querySelector(".edit-last");
+  if (!b) return;
+  b.onclick = () => openEditSets(box, EX, e, () => {
+    const wrap = document.createElement("div");
+    wrap.innerHTML = lastSetsHtml(e);
+    const fresh = wrap.firstElementChild;
+    box.replaceWith(fresh);
+    bindLastEdit(fresh, EX, e);
+  });
 }
 function historyTable(list, kind) {
   if (!list.length) return `<p class="hintline">Записей пока нет — добавь первый подход выше.</p>`;
@@ -1087,7 +1099,7 @@ function renderSetsBlock(cell, EX, e) {
   </div>`;
   cell.querySelector(".edit-entry").onclick = () => openEditSets(cell, EX, e);
 }
-function openEditSets(cell, EX, e) {
+function openEditSets(cell, EX, e, onCancel) {
   const rows = setsOf(e);
   const body = rows.map((x, i) => `<tr><td>—</td><td class="num">${i + 1}</td>
     <td><input class="es-w" type="number" step="0.5" min="0" max="500" value="${x.w || ""}"></td>
@@ -1105,7 +1117,7 @@ function openEditSets(cell, EX, e) {
       <button class="ghost-add" id="edit-cancel">Отмена</button></div>
   </div>`;
   cell.querySelector("#edit-save").onclick = () => saveEdit(cell, EX, e);
-  cell.querySelector("#edit-cancel").onclick = () => renderSetsBlock(cell, EX, e);
+  cell.querySelector("#edit-cancel").onclick = () => onCancel ? onCancel() : renderSetsBlock(cell, EX, e);
 }
 async function saveEdit(cell, EX, e) {
   const d = (cell.querySelector("#edit-d") && cell.querySelector("#edit-d").value) || e.d;
@@ -1301,6 +1313,8 @@ function openEx(id) {
   $("dlg-in").querySelectorAll("[data-del]").forEach((b) => {
     b.onclick = () => deleteEntry(EX, b.dataset.del);
   });
+  const lastBox = $("dlg-in").querySelector(".last-set");
+  if (lastBox && last) bindLastEdit(lastBox, EX, last);
   openDlg();
 }
 
