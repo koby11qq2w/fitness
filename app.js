@@ -1130,8 +1130,7 @@ function renderWorkouts() {
   const cards = shown.map((d) => {
     const st = dayStats(d);
     const exs = st.ids.map((id) => allExercises().find((x) => x.id === id)).filter(Boolean);
-    const items = exs.slice(0, 4).map((ex) => `<div class="wk-ex">${workoutThumb(ex)}<span class="wk-cap">${esc(ex.name)}</span></div>`).join("") +
-      (exs.length > 4 ? `<div class="wk-ex"><span class="wk-thumb wk-thumb-more">+${exs.length - 4}</span><span class="wk-cap">ещё</span></div>` : "");
+    const items = exs.map((ex) => `<div class="wk-ex">${workoutThumb(ex)}<span class="wk-cap">${esc(ex.name)}</span></div>`).join("");
     const plan = workoutByDate(d);
     const isToday = d === today();
     return `<article class="wk-card${isToday ? " today" : ""}" data-wkd="${d}" tabindex="0" role="button">
