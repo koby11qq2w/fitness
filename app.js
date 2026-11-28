@@ -483,7 +483,7 @@ function mainValue(e, kind) {
 /* ---------- отрисовка ---------- */
 function allExercises() {
   const c = (state.data && state.data.custom && state.data.custom[state.p]) || [];
-  return CATALOG.concat(c);
+  return c.slice().reverse().concat(CATALOG);
 }
 
 function renderCards() {
@@ -886,6 +886,110 @@ function libFiltered() {
   });
 }
 
+const LIB_GROUP = { CHEST: "Грудь", BACK: "Спина", LEGS: "Ноги", GLUTEUS: "Ноги", SHOULDERS: "Плечи", BICEPS: "Руки", TRICEPS: "Руки", ABS: "Пресс" };
+const LIB_MUSCLE = [
+  [/^BICEPS_FEMORIS|^SEMIMEMBRANOSUS|^SEMITENDINOSUS/, "hamstrings"],
+  [/^BICEPS_(LONG|SHORT)|^BRACHIALIS/, "biceps"],
+  [/^BRACHIORADIALIS|^FOREARM_/, "forearms"],
+  [/^TRICEPS_/, "triceps"],
+  [/^CHEST_/, "chest"],
+  [/^SHOULDERS_/, "delts"],
+  [/^ABS_OBLIQUES/, "obliques"],
+  [/^ABS_/, "abs"],
+  [/^QUADRICEPS_|^SARTORIUS|^PECTINEUS/, "quads"],
+  [/^ADDUCTOR_|^GRACILIS/, "adductors"],
+  [/^GLUTEUS_/, "glutes"],
+  [/^ERECTOR_SPINAE/, "lower_back"],
+  [/^BACK_LATS|^BACK_TERES/, "lats"],
+  [/^BACK_TRAPEZIUS_/, "traps"],
+  [/^BACK_/, "lats"],
+  [/^CLAVES_|GASTROCNEMIUS|SOLEUS|TIBIALIS/, "calves"],
+];
+
+function asList(v) {
+  if (Array.isArray(v)) return v.map((x) => String(x || "").trim()).filter(Boolean);
+  if (typeof v === "string") return v.split(/\n+/).map((x) => x.trim()).filter(Boolean);
+  return [];
+}
+function normName(s) {
+  return String(s || "").toLowerCase().replace(/ё/g, "е").replace(/[^a-zа-я0-9]+/g, " ").trim();
+}
+function libExisting(x) {
+  const n = normName(x.title);
+  return allExercises().find((e) => normName(e.name) === n) || null;
+}
+function libMuscles(x) {
+  const out = [];
+  (x.muscles || []).forEach((m) => {
+    for (const [re, key] of LIB_MUSCLE) if (re.test(m)) { if (!out.includes(key)) out.push(key); break; }
+  });
+  if (!out.length) {
+    const g = { CHEST: "chest", BACK: "lats", LEGS: "quads", GLUTEUS: "glutes", SHOULDERS: "delts", BICEPS: "biceps", TRICEPS: "triceps", ABS: "abs" }[x.bodyPart];
+    if (g) out.push(g);
+  }
+  return { p: out.slice(0, 2), s: out.slice(2, 6) };
+}
+function libKind(x) {
+  const title = String(x.title || "").toUpperCase();
+  const tags = (x.tags || []).join(" ").toUpperCase();
+  if (/ПЛАНК|УДЕРЖ|ВИС( |$)|СТОЙК|РАСТЯЖ|ISOMETRIC|STRETCH|MOBILITY/.test(title) || /ISOMETRIC|STRETCH|MOBILITY/.test(tags)) return "time";
+  if (/ШТАНГ|ГАНТЕЛ|ТРЕНАЖ|БЛОК|ГИР|ГРИФ|КРОССОВЕР/.test(title)) return "weight";
+  if (/ОТЖИМАН|ПОДТЯГИВАН|ПРИСЕДАН|ВЫПАД|СКРУЧИВАН|ПРЫЖ|ПОДЪ[ЕЁ]М НОГ|ЛОДОЧК|СКЛАДК/.test(title)) return "reps";
+  if (/STRENGTH/.test(tags)) return "weight";
+  if (/PLYOMETRIC|CARDIO/.test(tags)) return "reps";
+  return "weight";
+}
+function libEq(x) {
+  const t = String(x.title || "").toUpperCase();
+  if (/ШТАНГ|ГРИФ/.test(t)) return "штанга";
+  if (/ГАНТЕЛ/.test(t)) return "гантели";
+  if (/ТРЕНАЖ|БЛОК|КРОССОВЕР|ХАММЕР|СМИТ/.test(t)) return "тренажёр";
+  if (/ПЕРЕКЛАДИН|ТУРНИК|БРУСЬ/.test(t)) return "перекладина";
+  if (/ГИР/.test(t)) return "гиря";
+  if (/РЕЗИН|ЭСПАНДЕР/.test(t)) return "резинка";
+  if (/СВОЙ ВЕС|СВОИМ ВЕСОМ|БЕЗ СНАРЯД/.test(t)) return "свой вес";
+  return "своё";
+}
+function libCue(x) {
+  const first = asList(x.instructions)[0] || "";
+  const d = String(x.description || "").split(/(?<=[.!?])\s+/)[0] || "";
+  const s = first || d || x.title || "";
+  return s.length > 220 ? s.slice(0, 217).trimEnd() + "…" : s;
+}
+function libPayload(x) {
+  const m = libMuscles(x);
+  return {
+    profile: state.p,
+    name: String(x.title || "").slice(0, 80),
+    group: LIB_GROUP[x.bodyPart] || "Другое",
+    eq: libEq(x),
+    kind: libKind(x),
+    p: m.p,
+    s: m.s,
+    libId: x.id,
+    libTitleEn: x.titleEn || "",
+    video: x.video || "",
+    poster: x.image || "",
+    img: x.image || "",
+    desc: x.description || "",
+    howto: asList(x.instructions),
+    tips: asList(x.tips),
+    mistakes: asList(x.mistakes),
+    cue: libCue(x),
+  };
+}
+function libDescrHtml(EX) {
+  const howto = asList(EX.howto), tips = asList(EX.tips), mistakes = asList(EX.mistakes);
+  const paras = String(EX.desc || "").split(/\n+/).filter(Boolean).map((p) => `<p>${esc(p)}</p>`).join("");
+  return `<button class="more-btn" id="more-btn" aria-expanded="false">Описание и техника</button>
+  <div class="descr" id="descr">
+    ${paras ? `<h3>Описание</h3>${paras}` : ""}
+    ${howto.length ? `<h3>Техника</h3><ol>${howto.map((s) => `<li>${esc(s)}</li>`).join("")}</ol>` : ""}
+    ${tips.length ? `<h3>Советы</h3><ul>${tips.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>` : ""}
+    ${mistakes.length ? `<h3>Частые ошибки</h3><ul>${mistakes.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>` : ""}
+  </div>`;
+}
+
 function renderLibrary() {
   const box = $("library");
   if (!state.library) {
@@ -922,15 +1026,21 @@ function openLib(id) {
   const x = (state.library || []).find((y) => y.id === id);
   if (!x) return;
   const part = LIB_PARTS[x.bodyPart] || "Другое";
+  const existing = libExisting(x);
   const media = x.video
     ? `<video class="lib-video" controls autoplay muted loop playsinline poster="${esc(x.image || "")}"><source src="${esc(x.video)}" type="video/mp4"></video>`
     : (x.image ? `<img class="lib-video" src="${esc(x.image)}" alt="">` : "");
-  const text = (s) => `<p>${esc(s).replace(/\n+/g, "</p><p>")}</p>`;
+  const text = (s) => (Array.isArray(s) ? s : String(s || "").split(/\n+/))
+    .filter(Boolean).map((p) => `<p>${esc(p)}</p>`).join("");
   $("dlg-in").innerHTML = `
     <div class="dlg-head"><div><h2 id="dlg-title">${esc(x.title)}</h2>
       <div class="sub2">${esc(part)}${x.titleEn ? " · " + esc(x.titleEn) : ""}</div></div>
       <button class="x" id="dlg-x" aria-label="Закрыть">×</button></div>
     <div class="dlg-body">
+      <div class="new-actions lib-add">
+        <button type="button" class="save-btn" id="lib-add">${existing ? "Уже в упражнениях — открыть" : "Добавить в упражнения"}</button>
+        <span class="hintline">${existing ? "Такое упражнение уже есть в «Упражнениях»." : "Добавится в «Упражнения» у профиля «" + esc(state.data.profiles[state.p].name) + "»."}</span>
+      </div>
       ${media ? `<div class="lib-media">${media}</div>` : ""}
       ${x.description ? `<h3>Описание</h3>${text(x.description)}` : ""}
       ${x.instructions ? `<h3>Техника</h3>${text(x.instructions)}` : ""}
@@ -939,6 +1049,29 @@ function openLib(id) {
       ${x.path ? `<p class="lib-src"><a href="https://smartworkout.app${esc(x.path)}" target="_blank" rel="noopener">Открыть на SmartWorkout</a></p>` : ""}
     </div>`;
   $("dlg-x").onclick = closeDlg;
+  const add = $("lib-add");
+  if (add) add.onclick = async () => {
+    if (existing) { state.view = "grid"; state.group = "Все"; refresh(); openEx(existing.id); return; }
+    add.disabled = true;
+    add.textContent = "Добавляю…";
+    try {
+      const r = await fetch("/api/exercise", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(libPayload(x)),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || "не добавилось");
+      state.data = await (await fetch("/api/data", { cache: "no-store" })).json();
+      state.view = "grid"; state.group = "Все";
+      refresh();
+      openEx(j.exercise.id);
+      toast("Добавлено в упражнения");
+    } catch (e) {
+      add.disabled = false;
+      add.textContent = "Добавить в упражнения";
+      toast("Ошибка: " + e.message, true);
+    }
+  };
   openDlg();
 }
 
@@ -1202,6 +1335,7 @@ function openEx(id) {
   const isLP = EX.id === "legpress";
   const hasImg = !!EX.img;
   const hasVideo = !!EX.video;
+  const libInfo = !!(EX.desc || asList(EX.howto).length || asList(EX.tips).length || asList(EX.mistakes).length);
   const lpLegend = `<div class="bodymap-legend lp-legend"><span><i style="background:#b83a2e"></i>квадрицепс</span><span><i style="background:#2f6fb2"></i>задняя поверхность</span><span><i style="background:#7b4f9e"></i>ягодицы</span><span><i style="background:#3f8f4e"></i>голени</span></div>`;
 
   $("dlg-in").innerHTML = `
@@ -1212,7 +1346,7 @@ function openEx(id) {
     </div>
     <div class="dlg-body">
       <div class="dlg-top${hasImg || hasVideo ? " single" : ""}">
-        <div class="pic-lg${hasVideo ? " video" : hasImg ? " plate full" : ""}">${hasVideo ? `<video class="detail-video" autoplay muted loop playsinline controls poster="${EX.poster || ""}"><source src="${EX.video}" type="video/mp4"></video>` : hasImg ? `<span class="imgbox"><img class="plate-img" src="${EX.img}" alt="${esc(EX.name)}"></span>` : pictoSvg(EX)}</div>
+        <div class="pic-lg${hasVideo ? " video" : hasImg ? " plate full" : ""}">${hasVideo ? `<video class="detail-video" autoplay muted loop playsinline controls poster="${esc(EX.poster || "")}"><source src="${esc(EX.video)}" type="video/mp4"></video>` : hasImg ? `<span class="imgbox"><img class="plate-img" src="${esc(EX.img)}" alt="${esc(EX.name)}"></span>` : pictoSvg(EX)}</div>
         ${hasImg || hasVideo ? "" : `<div>
           <div class="bodymap">${bodyMapSvg(EX)}</div>
           ${legendSvg(EX)}
@@ -1220,7 +1354,7 @@ function openEx(id) {
       </div>
       ${isLP && !hasVideo ? lpLegend : ""}
       <p class="cue">${esc(EX.cue)}</p>
-      ${EX.id === "legpress" ? `
+      ${!libInfo && EX.id === "legpress" ? `
       <button class="more-btn" id="more-btn" aria-expanded="false">Описание и техника</button>
       <div class="descr" id="descr">
         <h3>Зачем</h3>
@@ -1250,7 +1384,7 @@ function openEx(id) {
         <p>3–4 подхода по 8–15 повторов, в начале тренировки ног. Перед жимом ногами — приседания, после — разгибания и сгибания ног.</p>
         <p class="src">Описание по мотивам статьи powermens.ru «Жим ногами»; картинка оттуда же, для личной страницы.</p>
       </div>` : ""}
-      ${EX.id !== "legpress" ? `
+      ${!libInfo && EX.id !== "legpress" ? `
       <button class="more-btn" id="more-btn" aria-expanded="false">Описание и техника</button>
       <div class="descr" id="descr">
         <h3>Техника</h3>
@@ -1264,10 +1398,11 @@ function openEx(id) {
         <h3>Сколько</h3>
         <p>3–4 подхода по 8–12 повторов. Начинай с разминочного подхода с лёгким весом.</p>
       </div>` : ""}
+      ${libInfo ? libDescrHtml(EX) : ""}
       <div class="stats${kind === "weight" ? " three" : ""}">${statsHtml}</div>
       <div class="chart-box">
         <div class="chart-head"><span>динамика ${kind === "weight" ? "10ПМ (расчёт)" : kind === "time" ? "времени" : "повторов"}</span>
-          <span>${list.length} запис${list.length === 1 ? "ь" : list.length < 5 ? "и" : "ей"}</span></div>
+          <span>${list.length} ${list.length % 10 === 1 && list.length % 100 !== 11 ? "запись" : list.length % 10 >= 2 && list.length % 10 <= 4 && (list.length % 100 < 10 || list.length % 100 >= 20) ? "записи" : "записей"}</span></div>
         ${chart}
       </div>
       <div class="new-set">
@@ -1394,7 +1529,7 @@ function openNewEx() {
       <button class="x" id="dlg-x" aria-label="Закрыть">×</button></div>
     <div class="dlg-body">
       <form class="ex-form" id="ex-form">
-        <label>название *<input name="name" required maxlength="60" placeholder="например, тяга в наклоне"></label>
+        <label>название *<input name="name" required maxlength="80" placeholder="например, тяга в наклоне"></label>
         <div class="ex-row">
           <label>группа<select name="group">${groups.map((g) => `<option value="${g}">${g}</option>`).join("")}</select></label>
           <label>снаряд<input name="eq" placeholder="штанга, тренажёр"></label>

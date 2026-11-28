@@ -134,6 +134,14 @@
     }
     return { ex, entry };
   }
+  const mediaPath = (v) => {
+    const s = String(v || "").trim().slice(0, 200);
+    return /^lib\/[A-Za-z0-9_./-]+$/.test(s) && !s.includes("..") ? s : "";
+  };
+  const text = (v, n) => String(v || "").trim().slice(0, n);
+  const textList = (v, n = 20, item = 400) => Array.isArray(v)
+    ? v.slice(0, n).map((x) => String(x || "").trim().slice(0, item)).filter(Boolean) : [];
+
   function sortLog(log) { for (const ex of Object.keys(log)) log[ex].sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0)); }
 
   function mutate(path, b) {
@@ -159,9 +167,15 @@
       return { ok: true, updated: data.updated };
     }
     if (path === "/api/exercise") {
-      const name = String(b.name || "").trim().slice(0, 60);
+      const name = String(b.name || "").trim().slice(0, 80);
       if (!name) throw new Error("введи название");
-      const ex = { id: "custom-" + uid(), name, group: String(b.group || "Другое").slice(0, 20), eq: String(b.eq || "своё").slice(0, 30), kind: ["weight", "reps", "time"].includes(b.kind) ? b.kind : "weight", p: Array.isArray(b.p) ? b.p.slice(0, 8) : [], s: Array.isArray(b.s) ? b.s.slice(0, 8) : [], custom: true, cue: "Своё упражнение." };
+      const extra = {
+        libId: text(b.libId, 40), libTitleEn: text(b.libTitleEn, 120),
+        video: mediaPath(b.video), poster: mediaPath(b.poster), img: mediaPath(b.img),
+        desc: text(b.desc, 4000), howto: textList(b.howto), tips: textList(b.tips), mistakes: textList(b.mistakes),
+      };
+      const ex = { id: "custom-" + uid(), name, group: String(b.group || "Другое").slice(0, 20), eq: String(b.eq || "своё").slice(0, 30), kind: ["weight", "reps", "time"].includes(b.kind) ? b.kind : "weight", p: Array.isArray(b.p) ? b.p.slice(0, 8) : [], s: Array.isArray(b.s) ? b.s.slice(0, 8) : [], custom: true, cue: text(b.cue, 300) || "Своё упражнение." };
+      for (const k in extra) if (extra[k] && (!Array.isArray(extra[k]) || extra[k].length)) ex[k] = extra[k];
       data.custom[p].push(ex); data.updated = Math.floor(Date.now() / 1000);
       return { ok: true, exercise: ex, updated: data.updated };
     }
