@@ -1073,7 +1073,7 @@ function bindLastEdit(box, EX, e) {
 }
 function historyTable(list, kind) {
   if (!list.length) return `<p class="hintline">Записей пока нет — добавь первый подход выше.</p>`;
-  const items = list.slice().reverse().slice(0, 30);
+  const items = list.slice().reverse();
   const rows = items.map((e) => `
     <tr>
       <td><button class="exp" data-x="${e.id}" title="Показать подходы">+</button></td>
