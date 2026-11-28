@@ -470,4 +470,4 @@ code{background:var(--panel);border-radius:4px;padding:1px 4px;font-size:10.5px}
 .wk-thumb{width:80px;height:50px;border-radius:6px;overflow:hidden;background:#0b0c0e;border:1px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted)}
 .wk-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .wk-thumb-more{font-size:11px}
-.wk-cap{font-size:10px;line-height:1.15;color:var(--text);overflow-wrap:anywhere;display:block}
+.wk-cap{font-size:10px;line-height:1.15;color:var(--text);overflow-wrap:anywhere;display:block;text-align:center}
