@@ -1116,6 +1116,11 @@ function dayStats(date) {
   }));
   return { ids, sets, tonnage: tonnage / 1000 };
 }
+function workoutThumb(EX) {
+  const src = EX.poster || EX.img;
+  if (src) return `<span class="wk-thumb"><img src="${esc(src)}" alt="" loading="lazy"></span>`;
+  return `<span class="wk-thumb wk-thumb-letter">${esc((EX.name || "?").slice(0, 1))}</span>`;
+}
 function renderWorkouts() {
   const box = $("workouts");
   if (!state.data) { box.innerHTML = ""; return; }
@@ -1124,15 +1129,16 @@ function renderWorkouts() {
   const shown = days.slice(0, state.wkShown);
   const cards = shown.map((d) => {
     const st = dayStats(d);
-    const names = st.ids.map((id) => {
-      const ex = allExercises().find((x) => x.id === id);
-      return ex ? ex.name : "";
-    }).filter(Boolean);
+    const exs = st.ids.map((id) => allExercises().find((x) => x.id === id)).filter(Boolean);
+    const names = exs.map((e) => e.name);
+    const thumbs = exs.slice(0, 4).map(workoutThumb).join("") +
+      (exs.length > 4 ? `<span class="wk-thumb wk-thumb-more">+${exs.length - 4}</span>` : "");
     const plan = workoutByDate(d);
     const isToday = d === today();
     return `<article class="wk-card${isToday ? " today" : ""}" data-wkd="${d}" tabindex="0" role="button">
       <div class="wk-date">${fmtD(d, true)}<span>${isToday ? "сегодня" : plan ? "план" : "из истории"}</span></div>
       <div class="wk-meta">${st.ids.length} ${plural(st.ids.length, "упражнение", "упражнения", "упражнений")} · ${st.sets} ${plural(st.sets, "подход", "подхода", "подходов")}${st.tonnage ? " · " + num(st.tonnage) + " т" : ""}</div>
+      ${thumbs ? `<div class="wk-thumbs">${thumbs}</div>` : ""}
       <div class="wk-exs">${names.slice(0, 4).map(esc).join(" · ")}${names.length > 4 ? " …" : ""}</div>
     </article>`;
   }).join("");
