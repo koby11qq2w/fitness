@@ -420,3 +420,47 @@ code{background:var(--panel);border-radius:4px;padding:1px 4px;font-size:10.5px}
   dialog{max-height:100vh;max-height:100dvh;max-width:100vw}
   .dlg-in{max-height:100vh;max-height:100dvh;border-radius:0}
 }
+
+/* Тренировки */
+.workouts{display:flex;flex-direction:column;gap:8px}
+.wk-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0}
+.wk-head h1{font-size:18px;margin:0;font-weight:600}
+.wk-title{font-size:14px;font-weight:600}
+.wk-sum{font-size:11px;color:var(--muted)}
+.wk-list{display:flex;flex-direction:column;gap:8px}
+.wk-card{background:var(--panel);border:1px solid transparent;border-radius:8px;padding:10px 12px;cursor:pointer}
+.wk-card:hover{border-color:var(--line)}
+.wk-card.today{border-color:var(--acc)}
+.wk-date{display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:600}
+.wk-date span{font-size:10.5px;color:var(--muted);font-weight:400}
+.wk-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.wk-exs{font-size:11.5px;color:var(--text);margin-top:5px;line-height:1.35}
+.wk-items{display:flex;flex-direction:column;gap:6px}
+.wk-item{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--panel);border-radius:8px;padding:9px 10px}
+.wk-item-main{min-width:0}
+.wk-name{font-weight:600;font-size:13px}
+.wk-sub{font-size:10.5px;color:var(--muted);margin-top:1px}
+.wk-done{font-size:11px;color:var(--muted);margin-top:4px}
+.wk-item-actions{display:flex;gap:6px;align-items:center;flex:none}
+.wk-del{border:0;background:transparent;color:var(--muted);font-size:16px;cursor:pointer;padding:2px 6px}
+.wk-del:hover{color:#e5484d}
+.wp-tabs{display:flex;gap:4px;background:#17191d;border-radius:6px;padding:2px}
+.wp-tabs button{border:0;background:transparent;color:var(--muted);border-radius:5px;padding:5px 10px;font-size:12px;cursor:pointer}
+.wp-tabs button.on{background:var(--panel2);color:var(--text);font-weight:600}
+.wp-list{display:flex;flex-direction:column;gap:3px;max-height:52vh;overflow:auto;padding-right:10px}
+.wp-row{display:flex;align-items:center;gap:8px;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--line);color:var(--text);padding:7px 4px;font:inherit;font-size:12px;cursor:pointer;width:100%;box-sizing:border-box}
+.wp-row:hover{background:var(--panel)}
+.wp-n{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wp-g{font-size:10px;color:var(--muted);white-space:nowrap;flex:none}
+.wp-badge{font-size:9.5px;color:var(--acc-text);background:var(--acc-soft);border-radius:4px;padding:2px 5px;white-space:nowrap;flex:none}
+.viewtabs{overflow-x:auto;scrollbar-width:none;max-width:100%}
+.viewtabs::-webkit-scrollbar{display:none}
+.viewtabs button{white-space:nowrap;flex:none}
+@media (max-width:620px){
+  .viewtabs{margin-left:0;flex:1 1 100%;order:3}
+  .wk-item{flex-direction:column;align-items:stretch}
+  .wk-item-actions{justify-content:space-between}
+}
+@media (max-width:620px){
+  .viewtabs button{padding:4px 6px;font-size:10.5px}
+}

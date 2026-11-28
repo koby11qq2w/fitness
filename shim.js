@@ -10,6 +10,7 @@
     custom: { tim: [], kristina: [] },
     measurements: { tim: [], kristina: [] },
     weights: { tim: [], kristina: [] },
+    workouts: { tim: [], kristina: [] },
     updated: 0,
   };
   const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -52,6 +53,8 @@
     d.custom = d.custom || { tim: [], kristina: [] };
     d.measurements = d.measurements || { tim: [], kristina: [] };
     d.weights = d.weights || { tim: [], kristina: [] };
+    d.workouts = d.workouts || { tim: [], kristina: [] };
+    d.workouts.tim = d.workouts.tim || []; d.workouts.kristina = d.workouts.kristina || [];
     d.updated = d.updated || 0;
     return d;
   }
@@ -178,6 +181,32 @@
       for (const k in extra) if (extra[k] && (!Array.isArray(extra[k]) || extra[k].length)) ex[k] = extra[k];
       data.custom[p].push(ex); data.updated = Math.floor(Date.now() / 1000);
       return { ok: true, exercise: ex, updated: data.updated };
+    }
+    if (path === "/api/workout") {
+      const d = String(b.d || "").slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) throw new Error("неверная дата");
+      const [yy, mm, dd] = d.split("-").map(Number);
+      const dt = new Date(yy, mm - 1, dd);
+      if (dt.getFullYear() !== yy || dt.getMonth() !== mm - 1 || dt.getDate() !== dd) throw new Error("неверная дата");
+      const ex = [];
+      for (const x of (Array.isArray(b.ex) ? b.ex : [])) {
+        const eid = String(x || "").trim().slice(0, 40);
+        if (/^[A-Za-z0-9_-]{1,40}$/.test(eid) && !ex.includes(eid)) ex.push(eid);
+      }
+      if (ex.length > 40) ex.length = 40;
+      const arr = data.workouts[p];
+      let w = arr.find((x) => x.d === d);
+      if (w) w.ex = ex;
+      else { w = { id: "w-" + d, d, ex, created: Math.floor(Date.now() / 1000) }; arr.push(w); arr.sort((a, c) => (a.d < c.d ? -1 : 1)); }
+      data.updated = Math.floor(Date.now() / 1000);
+      return { ok: true, workout: w, updated: data.updated };
+    }
+    if (path === "/api/workout/delete") {
+      const wid = String(b.id || "");
+      const arr = data.workouts[p]; const next = arr.filter((x) => x.id !== wid);
+      if (next.length === arr.length) throw new Error("тренировка не найдена");
+      data.workouts[p] = next; data.updated = Math.floor(Date.now() / 1000);
+      return { ok: true, updated: data.updated };
     }
     if (path === "/api/weight") {
       const d = dateOf(b.d), kg = Math.round((+b.kg) * 10) / 10;

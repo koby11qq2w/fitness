@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0c0e">
 <title>Тренировки — Тимофей и Кристина</title>
-<link rel="stylesheet" href="style.css?v=20261128c">
+<link rel="stylesheet" href="style.css?v=20261128d">
 </head>
 <body data-p="tim">
 <header class="topbar">
@@ -17,6 +17,7 @@
       <span class="sub">дневник весов</span>
     </div>
     <div class="viewtabs" id="viewtabs" role="tablist" aria-label="Раздел">
+      <button data-v="workouts" role="tab">Тренировки</button>
       <button data-v="grid" class="on" role="tab">Упражнения</button>
       <button data-v="journal" role="tab">Журнал</button>
       <button data-v="measure" role="tab">Размеры</button>
@@ -34,6 +35,8 @@
 </header>
 
 <main>
+  <section class="workouts" id="workouts" aria-label="Тренировки" hidden></section>
+
   <section class="cards" id="cards" aria-label="Сводка"></section>
 
   <div class="toolbar">
@@ -60,7 +63,7 @@
 </dialog>
 
 <div class="toast" id="toast" role="status"></div>
-<script src="shim.js?v=20261128c"></script>
-<script src="app.js?v=20261128c"></script>
+<script src="shim.js?v=20261128d"></script>
+<script src="app.js?v=20261128d"></script>
 </body>
 </html>

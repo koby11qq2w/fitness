@@ -181,7 +181,8 @@ const CATALOG = [
 const GROUPS = ["Все", "Грудь", "Спина", "Ноги", "Плечи", "Руки", "Пресс", "Другое"];
 
 /* ---------- состояние ---------- */
-const state = { p: "tim", data: null, group: "Все", ex: null, view: "grid", dlg: null, library: null, libQ: "", libPart: "Все", libShown: 60 };
+const state = { p: "tim", data: null, group: "Все", ex: null, view: "grid", dlg: null, library: null, libQ: "", libPart: "Все", libShown: 60,
+  wkDate: null, wkShown: 30, wpTab: "my", wpQ: "", entryDate: null };
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -1075,10 +1076,304 @@ function openLib(id) {
   openDlg();
 }
 
+/* ---------- тренировки ---------- */
+function plural(n, one, few, many) {
+  const a = n % 100, b = n % 10;
+  return a >= 11 && a <= 14 ? many : b === 1 ? one : b >= 2 && b <= 4 ? few : many;
+}
+function workoutsFor() {
+  return (state.data && state.data.workouts && state.data.workouts[state.p]) || [];
+}
+function workoutByDate(date) {
+  return workoutsFor().find((w) => w.d === date) || null;
+}
+function logFor(exId) {
+  return ((state.data && state.data.log[state.p]) || {})[exId] || [];
+}
+function workoutExerciseIds(date) {
+  const plan = workoutByDate(date);
+  const ids = plan ? plan.ex.slice() : [];
+  const log = (state.data && state.data.log[state.p]) || {};
+  Object.keys(log).forEach((exId) => {
+    if (!ids.includes(exId) && log[exId].some((e) => e.d === date)) ids.push(exId);
+  });
+  return ids;
+}
+function workoutDays() {
+  const set = new Set(workoutsFor().map((w) => w.d));
+  const log = (state.data && state.data.log[state.p]) || {};
+  Object.values(log).forEach((arr) => arr.forEach((e) => { if (e.d) set.add(e.d); }));
+  return [...set].filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().reverse();
+}
+function dayStats(date) {
+  const ids = workoutExerciseIds(date);
+  let sets = 0, tonnage = 0;
+  const log = (state.data && state.data.log[state.p]) || {};
+  ids.forEach((id) => (log[id] || []).forEach((e) => {
+    if (e.d !== date) return;
+    sets += e.s || 0;
+    tonnage += (e.w || 0) * (e.r || 0) * (e.s || 0);
+  }));
+  return { ids, sets, tonnage: tonnage / 1000 };
+}
+function renderWorkouts() {
+  const box = $("workouts");
+  if (!state.data) { box.innerHTML = ""; return; }
+  if (state.wkDate) { renderWorkoutDetail(state.wkDate); return; }
+  const days = workoutDays();
+  const shown = days.slice(0, state.wkShown);
+  const cards = shown.map((d) => {
+    const st = dayStats(d);
+    const names = st.ids.map((id) => {
+      const ex = allExercises().find((x) => x.id === id);
+      return ex ? ex.name : "";
+    }).filter(Boolean);
+    const plan = workoutByDate(d);
+    const isToday = d === today();
+    return `<article class="wk-card${isToday ? " today" : ""}" data-wkd="${d}" tabindex="0" role="button">
+      <div class="wk-date">${fmtD(d, true)}<span>${isToday ? "сегодня" : plan ? "план" : "из истории"}</span></div>
+      <div class="wk-meta">${st.ids.length} ${plural(st.ids.length, "упражнение", "упражнения", "упражнений")} · ${st.sets} ${plural(st.sets, "подход", "подхода", "подходов")}${st.tonnage ? " · " + num(st.tonnage) + " т" : ""}</div>
+      <div class="wk-exs">${names.slice(0, 4).map(esc).join(" · ")}${names.length > 4 ? " …" : ""}</div>
+    </article>`;
+  }).join("");
+  box.innerHTML = `<div class="wk-head"><h1>Тренировки</h1><button class="save-btn" id="wk-new">+ Новая тренировка</button></div>
+    <div class="wk-list">${cards || `<div class="empty-note">Пока нет тренировок. Нажмите «+ Новая тренировка».</div>`}</div>
+    ${days.length > state.wkShown ? `<div class="lib-more"><button id="wk-more">Показать ещё</button></div>` : ""}`;
+  $("wk-new").onclick = openNewWorkout;
+  if ($("wk-more")) $("wk-more").onclick = () => { state.wkShown += 30; renderWorkouts(); };
+  box.querySelectorAll("[data-wkd]").forEach((el) => {
+    const open = () => { state.wkDate = el.dataset.wkd; renderWorkouts(); };
+    el.onclick = open;
+    el.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } };
+  });
+}
+function renderWorkoutDetail(date) {
+  const box = $("workouts");
+  const plan = workoutByDate(date);
+  const ids = workoutExerciseIds(date);
+  const st = dayStats(date);
+  const items = ids.map((id) => {
+    const ex = allExercises().find((x) => x.id === id);
+    if (!ex) return "";
+    const entries = logFor(id).filter((e) => e.d === date);
+    const sets = entries.reduce((n, e) => n + (e.s || 0), 0);
+    const best = entries.reduce((m, e) => Math.max(m, e.w || 0), 0);
+    const inPlan = !!plan && plan.ex.includes(id);
+    return `<div class="wk-item">
+      <div class="wk-item-main">
+        <div class="wk-name">${esc(ex.name)}</div>
+        <div class="wk-sub">${esc(ex.group)} · ${esc(ex.eq)}</div>
+        <div class="wk-done">${sets ? `записано: ${sets} ${plural(sets, "подход", "подхода", "подходов")}${best ? ` · лучший ${kg(best)} кг` : ""}` : "пока не записано"}</div>
+      </div>
+      <div class="wk-item-actions">
+        <button class="ghost-add" data-wklog="${id}">Записать</button>
+        ${inPlan && !entries.length ? `<button class="wk-del" data-wkrm="${id}" title="Убрать из плана">×</button>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+  box.innerHTML = `
+    <div class="wk-head">
+      <button class="ghost-add" id="wk-back">← Все тренировки</button>
+      <div class="wk-title">${fmtD(date, true)}${date === today() ? " · сегодня" : ""}</div>
+    </div>
+    <div class="wk-sum">${st.ids.length} ${plural(st.ids.length, "упражнение", "упражнения", "упражнений")} · ${st.sets} ${plural(st.sets, "подход", "подхода", "подходов")}${st.tonnage ? " · " + num(st.tonnage) + " т" : ""}</div>
+    <div class="new-actions">
+      <button class="save-btn" id="wk-add">+ Добавить упражнение</button>
+      ${plan ? `<button class="ghost-add" id="wk-plan-del">Удалить тренировку</button>` : ""}
+    </div>
+    <div class="wk-items">${items || `<div class="empty-note">В тренировке пока нет упражнений.</div>`}</div>`;
+  $("wk-back").onclick = () => { state.wkDate = null; renderWorkouts(); };
+  $("wk-add").onclick = () => openWorkoutPicker(date);
+  const del = $("wk-plan-del");
+  if (del) {
+    let armed = false;
+    del.onclick = () => {
+      if (!armed) {
+        armed = true; del.textContent = "Точно удалить?";
+        setTimeout(() => { armed = false; if (document.body.contains(del)) del.textContent = "Удалить тренировку"; }, 3000);
+        return;
+      }
+      deleteWorkoutPlan(date);
+    };
+  }
+  box.querySelectorAll("[data-wklog]").forEach((b) => { b.onclick = () => openEx(b.dataset.wklog, { date }); });
+  box.querySelectorAll("[data-wkrm]").forEach((b) => { b.onclick = () => removeFromWorkout(date, b.dataset.wkrm); });
+}
+async function saveWorkoutPlan(date, ex) {
+  const r = await fetch("/api/workout", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ profile: state.p, d: date, ex }),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || "не сохранилось");
+  state.data = await (await fetch("/api/data", { cache: "no-store" })).json();
+  refresh();
+  return j.workout;
+}
+async function addExerciseToWorkout(date, exId) {
+  const ids = workoutExerciseIds(date);
+  if (ids.includes(exId)) { toast("Уже в тренировке"); return false; }
+  try {
+    await saveWorkoutPlan(date, ids.concat([exId]));
+    return true;
+  } catch (e) {
+    toast("Ошибка: " + e.message, true);
+    return false;
+  }
+}
+async function removeFromWorkout(date, exId) {
+  const plan = workoutByDate(date);
+  if (!plan) return;
+  try {
+    await saveWorkoutPlan(date, plan.ex.filter((x) => x !== exId));
+    toast("Убрано из плана, записи сохранены");
+  } catch (e) { toast("Ошибка: " + e.message, true); }
+}
+async function deleteWorkoutPlan(date) {
+  const plan = workoutByDate(date);
+  if (!plan) return;
+  try {
+    const r = await fetch("/api/workout/delete", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ profile: state.p, id: plan.id }),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || "не удалилось");
+    state.data = await (await fetch("/api/data", { cache: "no-store" })).json();
+    state.wkDate = null;
+    refresh();
+    toast("Тренировка удалена, записи остались");
+  } catch (e) { toast("Ошибка: " + e.message, true); }
+}
+function openNewWorkout() {
+  const d = today();
+  $("dlg-in").innerHTML = `<div class="dlg-head"><div><h2 id="dlg-title">Новая тренировка</h2>
+      <div class="sub2">${esc(state.data.profiles[state.p].name)} · выберите дату</div></div>
+      <button class="x" id="dlg-x" aria-label="Закрыть">×</button></div>
+    <div class="dlg-body">
+      <label class="ns-date">дата <input type="date" id="wk-new-d" value="${d}" max="${today()}"></label>
+      <div class="new-actions"><button class="save-btn" id="wk-create">Создать</button></div>
+    </div>`;
+  $("dlg-x").onclick = closeDlg;
+  $("wk-create").onclick = async () => {
+    const date = ($("wk-new-d") && $("wk-new-d").value) || d;
+    const btn = $("wk-create");
+    if (workoutByDate(date)) {
+      closeDlg(); state.wkDate = date; renderWorkouts(); return;
+    }
+    btn.disabled = true; btn.textContent = "Создаю…";
+    try {
+      closeDlg();
+      await saveWorkoutPlan(date, workoutExerciseIds(date));
+      state.wkDate = date;
+      renderWorkouts();
+      openWorkoutPicker(date);
+    } catch (e) {
+      toast("Ошибка: " + e.message, true);
+    }
+  };
+  openDlg();
+}
+async function ensureLibraryExercise(x) {
+  const found = libExisting(x);
+  if (found) return found;
+  const r = await fetch("/api/exercise", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(libPayload(x)),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || "не добавилось");
+  state.data = await (await fetch("/api/data", { cache: "no-store" })).json();
+  return j.exercise;
+}
+function openWorkoutPicker(date) {
+  state.wpTab = "my"; state.wpQ = "";
+  renderWorkoutPicker(date);
+  openDlg();
+}
+function renderWorkoutPicker(date) {
+  const box = $("dlg-in");
+  const tab = state.wpTab, q = state.wpQ.trim().toLowerCase();
+  const planIds = workoutExerciseIds(date);
+  if (tab === "lib" && !state.library) {
+    box.innerHTML = `<div class="dlg-head"><div><h2 id="dlg-title">Добавить упражнение</h2><div class="sub2">${fmtD(date, true)}</div></div>
+      <button class="x" id="dlg-x" aria-label="Закрыть">×</button></div>
+      <div class="dlg-body"><div class="empty-note">Загружаю библиотеку…</div></div>`;
+    $("dlg-x").onclick = () => { closeDlg(); renderWorkouts(); };
+    loadLibrary().then(() => renderWorkoutPicker(date)).catch((e) => toast("Библиотека не загрузилась: " + e.message, true));
+    return;
+  }
+  let rows = "";
+  if (tab === "my") {
+    const list = allExercises().filter((e) => !q || (e.name + " " + e.group + " " + e.eq).toLowerCase().includes(q));
+    rows = list.slice(0, 40).map((e) => `<button class="wp-row" data-wpmy="${e.id}">
+      <span class="wp-n">${esc(e.name)}</span><span class="wp-g">${esc(e.group)}</span>
+      ${planIds.includes(e.id) ? `<span class="wp-badge">в тренировке</span>` : ""}</button>`).join("");
+  } else {
+    const list = (state.library || []).filter((x) => !q || (x.title + " " + (x.titleEn || "")).toLowerCase().includes(q));
+    rows = list.slice(0, 40).map((x) => {
+      const existing = libExisting(x);
+      const inPlan = existing && planIds.includes(existing.id);
+      return `<button class="wp-row" data-wplib="${x.id}">
+        <span class="wp-n">${esc(x.title)}</span><span class="wp-g">${esc(LIB_PARTS[x.bodyPart] || "Другое")}</span>
+        ${inPlan ? `<span class="wp-badge">в тренировке</span>` : existing ? `<span class="wp-badge">в упражнениях</span>` : ""}</button>`;
+    }).join("");
+  }
+  if (!rows) rows = `<div class="empty-note">Ничего не найдено.</div>`;
+  box.innerHTML = `<div class="dlg-head"><div><h2 id="dlg-title">Добавить упражнение</h2>
+      <div class="sub2">${fmtD(date, true)} · ${esc(state.data.profiles[state.p].name)}</div></div>
+      <button class="x" id="dlg-x" aria-label="Закрыть">×</button></div>
+    <div class="dlg-body">
+      <div class="wp-tabs"><button data-wpt="my" class="${tab === "my" ? "on" : ""}">Мои упражнения</button>
+        <button data-wpt="lib" class="${tab === "lib" ? "on" : ""}">Библиотека</button></div>
+      <input id="wp-q" type="search" placeholder="Поиск…" value="${esc(state.wpQ)}">
+      <div class="wp-list">${rows}</div>
+      <div class="new-actions"><button class="ghost-add" id="wp-done">Готово</button></div>
+    </div>`;
+  $("dlg-x").onclick = () => { closeDlg(); renderWorkouts(); };
+  $("wp-done").onclick = () => { closeDlg(); renderWorkouts(); };
+  $("wp-q").oninput = (e) => {
+    state.wpQ = e.target.value;
+    const pos = e.target.selectionStart;
+    renderWorkoutPicker(date);
+    const q2 = $("wp-q");
+    if (q2) { q2.focus(); q2.setSelectionRange(pos, pos); }
+  };
+  box.querySelectorAll("[data-wpt]").forEach((b) => {
+    b.onclick = () => { state.wpTab = b.dataset.wpt; renderWorkoutPicker(date); };
+  });
+  box.querySelectorAll("[data-wpmy]").forEach((b) => {
+    b.onclick = async () => {
+      if (await addExerciseToWorkout(date, b.dataset.wpmy)) {
+        renderWorkoutPicker(date);
+        toast("Добавлено в тренировку");
+      }
+    };
+  });
+  box.querySelectorAll("[data-wplib]").forEach((b) => {
+    b.onclick = async () => {
+      const x = (state.library || []).find((y) => y.id === b.dataset.wplib);
+      if (!x) return;
+      b.disabled = true;
+      try {
+        const ex = await ensureLibraryExercise(x);
+        if (await addExerciseToWorkout(date, ex.id)) {
+          renderWorkoutPicker(date);
+          toast("Добавлено в тренировку");
+        }
+      } catch (e) {
+        b.disabled = false;
+        toast("Ошибка: " + e.message, true);
+      }
+    };
+  });
+}
+
 function renderView() {
   const gridView = state.view === "grid";
   $("grid").hidden = !gridView;
-  $("cards").hidden = state.view === "measure" || state.view === "library";
+  $("cards").hidden = state.view === "measure" || state.view === "library" || state.view === "workouts";
+  $("workouts").hidden = state.view !== "workouts";
   $("journal").hidden = state.view !== "journal";
   $("measure").hidden = state.view !== "measure";
   $("library").hidden = state.view !== "library";
@@ -1087,6 +1382,9 @@ function renderView() {
   if (state.view === "journal") renderJournal();
   if (state.view === "measure") renderMeasure();
   if (state.view === "library") renderLibrary();
+  if (state.view === "workouts") renderWorkouts();
+  const foot = document.querySelector(".foot");
+  if (foot) foot.hidden = state.view === "workouts";
 }
 
 function refresh() {
@@ -1295,10 +1593,11 @@ function newRowHtml() {
   </tr>`;
 }
 
-function openEx(id) {
+function openEx(id, opts) {
   const EX = allExercises().find((e) => e.id === id);
   if (!EX) return;
   state.ex = EX;
+  state.entryDate = (opts && opts.date) || null;
   const list = entriesFor(id);
   const last = lastOf(list);
   const kind = EX.kind;
@@ -1407,7 +1706,7 @@ function openEx(id) {
       </div>
       <div class="new-set">
         <div class="ls-head"><b>Новая тренировка</b>
-          <label class="ns-date">дата <input type="date" id="new-d" value="${today()}" max="${today()}"></label></div>
+          <label class="ns-date">дата <input type="date" id="new-d" value="${state.entryDate || today()}" max="${today()}"></label></div>
         <div class="ls-wrap"><table class="ls-table"><thead><tr><th>дата</th><th class="num">подход</th>
           <th class="num">вес, кг</th><th class="num">повторы</th><th class="num">вес дропа</th>
           <th class="num">повторы дропа</th></tr></thead><tbody id="new-body">${newRowHtml()}</tbody></table></div>
@@ -1467,6 +1766,8 @@ function closeDlg() {
   if (typeof d.close === "function") d.close();
   else d.removeAttribute("open");
   state.ex = null;
+  state.entryDate = null;
+  if (state.view === "workouts") renderWorkouts();
 }
 
 /* ---------- добавление и удаление ---------- */
@@ -1493,7 +1794,7 @@ async function saveWorkout(EX) {
     state.data = await (await fetch("/api/data", { cache: "no-store" })).json();
     markLive(true);
     refresh();
-    openEx(EX.id);
+    openEx(EX.id, state.entryDate ? { date: state.entryDate } : undefined);
     toast("Тренировка записана");
   } catch (e) {
     markLive(false);
@@ -1631,17 +1932,18 @@ async function boot() {
     };
   });
   $("viewtabs").querySelectorAll("button").forEach((b) => {
-    b.onclick = () => { state.view = b.dataset.v; renderView(); };
+    b.onclick = () => { state.view = b.dataset.v; if (state.view === "workouts") state.wkDate = null; renderView(); };
   });
   $("add-btn").onclick = openPicker;
   $("new-ex").onclick = openNewEx;
   $("dlg").addEventListener("click", (ev) => { if (ev.target === $("dlg")) closeDlg(); });
-  $("dlg").addEventListener("cancel", () => { state.ex = null; });
+  $("dlg").addEventListener("cancel", () => { state.ex = null; state.entryDate = null; if (state.view === "workouts") renderWorkouts(); });
   if (location.hash) {
     const id = location.hash.slice(1).replace("!", "");
     if (id === "journal") { state.view = "journal"; renderView(); }
     else if (id === "measure") { state.view = "measure"; renderView(); }
     else if (id === "library") { state.view = "library"; renderView(); }
+    else if (id === "workouts") { state.view = "workouts"; renderView(); }
     else if (id.indexOf("lib-") === 0) { state.view = "library"; renderView(); loadLibrary().then(() => openLib(id)); }
     else if (id === "newex") setTimeout(openNewEx, 120);
     else if (id === "add") setTimeout(openPicker, 120);
