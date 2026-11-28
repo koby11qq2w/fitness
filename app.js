@@ -1074,6 +1074,8 @@ function bindLastEdit(box, EX, e) {
 function historyTable(list, kind) {
   if (!list.length) return `<p class="hintline">Записей пока нет — добавь первый подход выше.</p>`;
   const items = list.slice().reverse();
+  const n100 = list.length % 100, n10 = list.length % 10;
+  const word = (n100 >= 11 && n100 <= 14) ? "записей" : n10 === 1 ? "запись" : (n10 >= 2 && n10 <= 4) ? "записи" : "записей";
   const rows = items.map((e) => `
     <tr>
       <td><button class="exp" data-x="${e.id}" title="Показать подходы">+</button></td>
@@ -1086,9 +1088,11 @@ function historyTable(list, kind) {
       <td class="num"><button class="del" data-del="${e.id}" title="Удалить">×</button></td>
     </tr>
     <tr class="hx" data-hx="${e.id}" hidden><td colspan="8"></td></tr>`).join("");
-  return `<table class="hist"><thead><tr><th></th><th>дата</th><th class="num">вес</th>
+  return `<div class="ls-head"><b>История</b><span>все ${list.length} ${word}</span></div>
+    <table class="hist"><thead><tr><th></th><th>дата</th><th class="num">вес</th>
     <th class="num">${kind === "time" ? "время" : "повт."}</th><th class="num">подх.</th>
-    <th class="num">10ПМ</th><th class="num">тоннаж</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+    <th class="num">10ПМ</th><th class="num">тоннаж</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+    <p class="hintline">Начало истории: ${fmtD(list[0].d, true)}.</p>`;
 }
 
 function renderSetsBlock(cell, EX, e) {
