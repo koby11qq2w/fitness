@@ -1130,16 +1130,14 @@ function renderWorkouts() {
   const cards = shown.map((d) => {
     const st = dayStats(d);
     const exs = st.ids.map((id) => allExercises().find((x) => x.id === id)).filter(Boolean);
-    const names = exs.map((e) => e.name);
-    const thumbs = exs.slice(0, 4).map(workoutThumb).join("") +
-      (exs.length > 4 ? `<span class="wk-thumb wk-thumb-more">+${exs.length - 4}</span>` : "");
+    const items = exs.slice(0, 4).map((ex) => `<div class="wk-ex">${workoutThumb(ex)}<span class="wk-cap">${esc(ex.name)}</span></div>`).join("") +
+      (exs.length > 4 ? `<div class="wk-ex"><span class="wk-thumb wk-thumb-more">+${exs.length - 4}</span><span class="wk-cap">ещё</span></div>` : "");
     const plan = workoutByDate(d);
     const isToday = d === today();
     return `<article class="wk-card${isToday ? " today" : ""}" data-wkd="${d}" tabindex="0" role="button">
       <div class="wk-date">${fmtD(d, true)}<span>${isToday ? "сегодня" : plan ? "план" : "из истории"}</span></div>
       <div class="wk-meta">${st.ids.length} ${plural(st.ids.length, "упражнение", "упражнения", "упражнений")} · ${st.sets} ${plural(st.sets, "подход", "подхода", "подходов")}${st.tonnage ? " · " + num(st.tonnage) + " т" : ""}</div>
-      ${thumbs ? `<div class="wk-thumbs">${thumbs}</div>` : ""}
-      <div class="wk-exs">${names.slice(0, 4).map(esc).join(" · ")}${names.length > 4 ? " …" : ""}</div>
+      ${items ? `<div class="wk-exs">${items}</div>` : ""}
     </article>`;
   }).join("");
   box.innerHTML = `<div class="wk-head"><h1>Тренировки</h1><button class="save-btn" id="wk-new">+ Новая тренировка</button></div>

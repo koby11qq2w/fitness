@@ -464,7 +464,10 @@ code{background:var(--panel);border-radius:4px;padding:1px 4px;font-size:10.5px}
 @media (max-width:620px){
   .viewtabs button{padding:4px 6px;font-size:10.5px}
 }
-.wk-thumbs{display:flex;gap:5px;margin-top:7px;overflow:hidden}
-.wk-thumb{width:86px;height:52px;border-radius:6px;overflow:hidden;background:#0b0c0e;border:1px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted)}
+.wk-exs{display:flex;gap:6px;margin-top:7px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.wk-exs::-webkit-scrollbar{display:none}
+.wk-ex{width:80px;flex:none;display:flex;flex-direction:column;gap:3px;min-width:0}
+.wk-thumb{width:80px;height:50px;border-radius:6px;overflow:hidden;background:#0b0c0e;border:1px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted)}
 .wk-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .wk-thumb-more{font-size:11px}
+.wk-cap{font-size:10px;line-height:1.15;color:var(--text);overflow-wrap:anywhere;display:block}
